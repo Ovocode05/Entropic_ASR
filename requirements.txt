@@ -1,0 +1,10 @@
+transformers
+datasets
+peft
+bitsandbytes
+accelerate
+librosa
+matplotlib
+soundfile
+jiwer  # For Word Error Rate (WER) tracking
+python-dotenv
