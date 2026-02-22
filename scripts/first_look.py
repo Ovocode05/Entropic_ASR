@@ -20,4 +20,5 @@ def visualize_hinglish(audio_path):
     plt.show()
 
 # Usage:
-visualize_hinglish("data/raw/sample.wav")
+audio_path = r'C:\Users\HP\Entropic_ASR\scripts\data\raw\collision_test.wav'
+visualize_hinglish(audio_path)
