@@ -83,31 +83,41 @@ class WhisperDataCollator:
     max_label_len  : int = 448    # Whisper tokenizer max
 
     def _resolve_path(self, path: str) -> str:
-        """Translate stored absolute path (any OS) to the current machine.
-        Handles Windows paths (C:\\...) running on Linux by splitting on \\ and /.
+        """Resolve audio path to an absolute path on the current machine.
+        
+        Handles three cases:
+        1. Relative path (new format): 'data/raw/audio/mucs_xyz.wav' → BASE_DIR / path
+        2. Already-valid absolute path (same machine)
+        3. Old Windows absolute path on Linux: 'C:\\Users\\...' → regex split to find data/raw
         """
         import re
+
         p = Path(path)
+
+        # Case 1: relative path → resolve against repo root
+        if not p.is_absolute():
+            candidate = BASE_DIR / p
+            if candidate.exists():
+                return str(candidate)
+
+        # Case 2: absolute path valid on this machine
         if p.exists():
-            return str(p)   # path already valid on this machine
+            return str(p)
 
-        # Split on BOTH separators (critical: Linux won't split Windows \\ paths)
+        # Case 3: Windows absolute path on Linux — split on both \\ and /
         parts = re.split(r'[/\\]+', path)
-
-        # Find 'data/raw' anchor and rebuild from repo root
         for i, part in enumerate(parts):
             if part == "data" and i + 1 < len(parts) and parts[i + 1] == "raw":
-                rel = Path(*parts[i:])
-                remapped = BASE_DIR / rel
+                remapped = BASE_DIR / Path(*parts[i:])
                 if remapped.exists():
                     return str(remapped)
 
-        # Last resort: filename only, look in audio dir
+        # Last resort: filename match in audio dir
         candidate = BASE_DIR / "data" / "raw" / "audio" / parts[-1]
         if candidate.exists():
             return str(candidate)
 
-        return path  # let soundfile raise the real error
+        return path  # let soundfile raise the error
 
     def _load_audio(self, path: str) -> np.ndarray:
         """Load WAV file with soundfile (no torchcodec needed)."""

@@ -41,8 +41,11 @@ import numpy as np
 # ──────────────────────────────────────────────────────────────────────────────
 # Defaults
 # ──────────────────────────────────────────────────────────────────────────────
-DEFAULT_MANIFEST   = r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\raw\manifest.csv"
-DEFAULT_SYNTHETIC  = r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\scripts\data\raw\synthetic_benchmark.csv"
+# Repo root = two levels up from scripts/data/ingest_synthetic.py
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_MANIFEST   = str(_REPO_ROOT / "data" / "raw" / "manifest.csv")
+DEFAULT_SYNTHETIC  = str(_REPO_ROOT / "scripts" / "data" / "raw" / "synthetic_benchmark.csv")
 
 # Unified column order —— everything for both models
 UNIFIED_COLUMNS = [

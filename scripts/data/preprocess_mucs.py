@@ -272,7 +272,7 @@ def process_split(
             sf.write(str(out_wav), audio, TARGET_SR, subtype="PCM_16")
 
             manifest_rows.append({
-                "audio_path"  : str(out_wav),
+                "audio_path"  : str(out_wav),   # caller will make relative if needed
                 "transcript"  : transcript,
                 "source"      : "mucs",
                 "split"       : split_name,
@@ -289,23 +289,26 @@ def process_split(
 # CLI
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Repo root is 3 levels up: scripts/data/preprocess_mucs.py → repo root
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
 def main():
     parser = argparse.ArgumentParser(
         description="Preprocess MUCS 2021 Hindi-English dataset into 16kHz WAV clips + manifest."
     )
     parser.add_argument(
         "--dataset-root",
-        default=r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\Hindi-English",
+        default=str(_REPO_ROOT / "Hindi-English"),
         help="Root directory containing 'train/' and 'test/' subdirs.",
     )
     parser.add_argument(
         "--output-audio-dir",
-        default=r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\raw\audio",
+        default=str(_REPO_ROOT / "data" / "raw" / "audio"),
         help="Directory to write sentence-level WAV clips into.",
     )
     parser.add_argument(
         "--manifest-path",
-        default=r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\raw\manifest.csv",
+        default=str(_REPO_ROOT / "data" / "raw" / "manifest.csv"),
         help="Path to the output manifest CSV (will be created/appended).",
     )
     parser.add_argument(
@@ -318,6 +321,12 @@ def main():
         "--no-skip-existing",
         action="store_true",
         help="Re-process even if output WAV already exists.",
+    )
+    parser.add_argument(
+        "--relative-paths",
+        action="store_true",
+        default=True,
+        help="Store relative (repo-root-relative) audio_path in manifest (default: True).",
     )
     args = parser.parse_args()
 

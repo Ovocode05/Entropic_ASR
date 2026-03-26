@@ -33,9 +33,12 @@ from datasets import Dataset, DatasetDict
 # ──────────────────────────────────────────────────────────────────────────────
 # Defaults
 # ──────────────────────────────────────────────────────────────────────────────
-DEFAULT_MANIFEST   = r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\raw\manifest.csv"
-DEFAULT_OUTPUT_ASR = r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\processed\hinglish_asr"
-DEFAULT_OUTPUT_FIN = r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR\data\processed\financial_benchmark"
+# Repo root = two levels up from scripts/data/build_hf_dataset.py
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_MANIFEST   = str(_REPO_ROOT / "data" / "raw" / "manifest.csv")
+DEFAULT_OUTPUT_ASR = str(_REPO_ROOT / "data" / "processed" / "hinglish_asr")
+DEFAULT_OUTPUT_FIN = str(_REPO_ROOT / "data" / "processed" / "financial_benchmark")
 TARGET_SR = 16_000
 
 
@@ -66,7 +69,8 @@ def build_asr_dataset(df_mucs: pd.DataFrame, output_dir: Path) -> DatasetDict:
         print(f"   split='{split_name}': {len(df_s)} utterances")
 
         ds = Dataset.from_dict({
-            "audio_path" : df_s["audio_path"].tolist(),   # plain path string
+            "audio_path" : [str(Path(p).relative_to(_REPO_ROOT)) if Path(p).is_absolute() else p
+                            for p in df_s["audio_path"].tolist()],   # relative path
             "transcript" : df_s["transcript"].tolist(),
             "utt_id"     : df_s["utt_id"].fillna("").tolist(),
         })
