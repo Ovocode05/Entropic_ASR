@@ -194,10 +194,28 @@ def main(args):
     dataset = load_from_disk(str(ASR_DATA))
     print(dataset)
 
+    print(f"Available splits: {list(dataset.keys())}")
+
+    # Flexible split name detection (HF Hub may use different names)
+    def find_split(dataset, *candidates):
+        for c in candidates:
+            if c in dataset:
+                return c
+        # fallback: find split whose name contains a candidate
+        for c in candidates:
+            matches = [k for k in dataset if c in k]
+            if matches:
+                return matches[0]
+        return list(dataset.keys())[0]  # last resort: first split
+
+    train_split = find_split(dataset, "train")
+    eval_split  = find_split(dataset, "test", "validation", "val")
+    print(f"Using train='{train_split}', eval='{eval_split}'")
+
     if args.dry_run:
-        print("\n[DRY RUN] Limiting to 200 train + 50 test examples...")
-        dataset["train"] = dataset["train"].select(range(min(200, len(dataset["train"]))))
-        dataset["test"]  = dataset["test"].select(range(min(50,  len(dataset["test"]))))
+        print("\n[DRY RUN] Limiting to 200 train + 50 eval examples...")
+        dataset[train_split] = dataset[train_split].select(range(min(200, len(dataset[train_split]))))
+        dataset[eval_split]  = dataset[eval_split].select(range(min(50,  len(dataset[eval_split]))))
 
     # ── Load processor (feature extractor + tokenizer) ────────────────────
     print(f"\nLoading Whisper processor: {BASE_MODEL}")
@@ -257,8 +275,8 @@ def main(args):
     trainer = Seq2SeqTrainer(
         model             = model,
         args              = training_args,
-        train_dataset     = dataset["train"],
-        eval_dataset      = dataset["test"],
+        train_dataset     = dataset[train_split],
+        eval_dataset      = dataset[eval_split],
         data_collator     = data_collator,
         compute_metrics   = make_compute_metrics(processor),
         processing_class  = processor.feature_extractor,
@@ -267,8 +285,8 @@ def main(args):
     # ── Train ─────────────────────────────────────────────────────────────
     print(f"\n{'='*60}")
     print("Starting Whisper LoRA training...")
-    print(f"  Train examples : {len(dataset['train'])}")
-    print(f"  Eval  examples : {len(dataset['test'])}")
+    print(f"  Train examples : {len(dataset[train_split])}")
+    print(f"  Eval  examples : {len(dataset[eval_split])}")
     print(f"  Epochs         : {args.epochs}")
     print(f"  Batch size     : {args.batch_size} × grad_accum {args.grad_accum}")
     print(f"  Effective batch: {args.batch_size * args.grad_accum}")
@@ -294,8 +312,8 @@ def main(args):
         "base_model"    : BASE_MODEL,
         "lora_r"        : LORA_CONFIG.r,
         "lora_alpha"    : LORA_CONFIG.lora_alpha,
-        "train_samples" : len(dataset["train"]),
-        "test_samples"  : len(dataset["test"]),
+        "train_samples" : len(dataset[train_split]),
+        "test_samples"  : len(dataset[eval_split]),
         "epochs"        : args.epochs,
         "elapsed_min"   : round(elapsed / 60, 1),
         **{k: round(v, 4) if isinstance(v, float) else v
