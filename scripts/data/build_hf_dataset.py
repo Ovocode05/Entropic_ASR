@@ -190,7 +190,15 @@ def main():
             "Run ingest_synthetic.py to migrate to the unified 13-column schema."
         )
 
-    print(f"\nSource distribution:\n{df['source'].value_counts().to_string()}")
+    print(f"\nSource distribution (before fix):\n{df['source'].value_counts().to_string()}")
+
+    # FIX: older versions of preprocess_mucs.py mistakenly wrote the split name into the 'source' column
+    df.loc[df["source"] == "train", "split"] = "train"
+    df.loc[df["source"] == "train", "source"] = "mucs"
+    df.loc[df["source"] == "test", "split"] = "test"
+    df.loc[df["source"] == "test", "source"] = "mucs"
+
+    print(f"\nSource distribution (after fix):\n{df['source'].value_counts().to_string()}")
 
     df_mucs  = df[df["source"] == "mucs"].copy()
     df_synth = df[df["source"] == "synthetic"].copy()
