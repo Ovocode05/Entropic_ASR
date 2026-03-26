@@ -54,13 +54,30 @@ def build_asr_dataset(df_mucs: pd.DataFrame, output_dir: Path) -> DatasetDict:
     print(f"\n── Building ASR dataset (MUCS) ──")
     print(f"   Total rows : {len(df_mucs)}")
 
-    # Only keep rows where audio file exists on disk
-    valid_mask = df_mucs["audio_path"].apply(
-        lambda p: Path(str(p)).exists() if pd.notna(p) else False
-    )
+    def resolve_audio_path(p):
+        if pd.isna(p): return None
+        p_str = str(p)
+        # 1. Check relative to DGX repo root
+        if not Path(p_str).is_absolute() and (_REPO_ROOT / p_str).exists():
+            return str(Path(p_str))
+        # 2. Check as-is (e.g. absolute Linux path)
+        if Path(p_str).exists():
+            return p_str
+        # 3. Check Windows path on Linux
+        import re
+        parts = re.split(r'[/\\]+', p_str)
+        candidate = _REPO_ROOT / "data" / "raw" / "audio" / parts[-1]
+        if candidate.exists():
+            return str(candidate)
+        return None
+
+    # Resolve and update all paths in the dataframe
+    df_mucs["audio_path"] = df_mucs["audio_path"].apply(resolve_audio_path)
+    
+    valid_mask = df_mucs["audio_path"].notna()
     n_missing = (~valid_mask).sum()
     if n_missing > 0:
-        print(f"   [WARN] {n_missing} audio files not found — dropping those rows")
+        print(f"   [WARN] {n_missing} audio files not found (or paths couldn't be resolved) — dropping those rows")
     df_mucs = df_mucs[valid_mask].copy()
 
     splits = {}
