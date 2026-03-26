@@ -239,6 +239,10 @@ def main(args):
     model.generation_config.task               = "transcribe"
 
     model.print_trainable_parameters()
+    # Enable gradient checkpointing to reduce activation memory during training
+    model.enable_input_require_grads()   # required for PEFT + gradient checkpointing
+    model.base_model.model.model.encoder.gradient_checkpointing = False  # encoder is frozen
+    # Note: for decoder gradient checkpointing, use training_args.gradient_checkpointing=True
     # Expected: ~2M trainable / 244M total ≈ 0.9% — LoRA efficiency
 
     # ── Training args ─────────────────────────────────────────────────────
@@ -247,8 +251,9 @@ def main(args):
     training_args = Seq2SeqTrainingArguments(
         output_dir               = str(MODEL_OUT),
         per_device_train_batch_size = args.batch_size,
-        per_device_eval_batch_size  = 4,
+        per_device_eval_batch_size  = 1,       # generation needs far more memory than forward
         gradient_accumulation_steps = args.grad_accum,
+        gradient_checkpointing      = True,    # saves ~30% activation memory
         learning_rate            = 1e-4,
         warmup_steps             = 500,
         max_steps                = args.max_steps if args.dry_run else -1,
@@ -260,7 +265,7 @@ def main(args):
         greater_is_better        = False,    # lower WER = better
         logging_steps            = 25,
         predict_with_generate    = True,
-        generation_max_length    = 448,
+        generation_max_length    = 225,        # ~30s audio → ~150 tokens; 225 is safe headroom
         fp16                     = (device == "cuda"),
         dataloader_num_workers   = 0,        # Windows: keep 0 to avoid multiprocessing issues
         remove_unused_columns    = False,    # keep audio_path+transcript for data collator
