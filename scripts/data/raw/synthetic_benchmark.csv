@@ -1,0 +1,301 @@
+audio_path,transcript,normalized,intent,amount,is_disambiguation,register,note
+,ek hazaar do sau ka transaction karo abhi,"Do transaction of ₹1,200 now",SEND_MONEY,1200,False,urgent,
+,bhai balance low ho gaya kya,Has balance gone low bro,CHECK_BALANCE,,False,casual,
+,mummy ko ek hazaar do sau bhejne hain,"Send ₹1,200 to mummy",SEND_MONEY,1200,False,casual,
+,phonepe pe bhejo das,Send ₹10 on PhonePe,SEND_MONEY,10,False,casual,
+,account mein bees bhejne hain,Need to send ₹20 to account,SEND_MONEY,20,False,formal,range:tens
+,usne ek hazaar bheja kya,"Did he send ₹1,000",RECEIVE_MONEY,1000,False,casual,
+,aaj saat ka kharcha hua,Spent ₹7 today,EXPENSE_LOG,7,False,casual,
+,account mein ek hazaar do sau dikha raha hai kya,"Is ₹1,200 showing in account",RECEIVE_MONEY,1200,False,formal,
+,gpay kar do das hazaar paanch sau,"GPay ₹10,500",SEND_MONEY,10500,False,casual,range:compound
+,internet bill sau dena hai,Need to pay internet bill ₹100,BILL_PAYMENT,100,False,formal,
+,chaar receive hua kya,Was ₹4 received,RECEIVE_MONEY,4,False,casual,range:ones
+,aath sau bhijwa de usse,Send ₹800 to him,SEND_MONEY,800,False,casual,
+,balance check karo,Check balance,CHECK_BALANCE,,False,casual,
+,do diya kya usne paisa,Did he give the money,RECEIVE_MONEY,,True,casual,do=VERB:gave
+,das hazaar paanch sau ka samaan liya aaj,"Bought goods worth ₹10,500 today",EXPENSE_LOG,10500,False,casual,
+,mera do nahi aaya yaar,My ₹2 hasn't arrived,RECEIVE_MONEY,2,False,casual,
+,khana kharid liya pachattar ka,Bought food worth ₹75,EXPENSE_LOG,75,False,casual,
+,bhai aath kab aayega,When will ₹8 arrive bro,RECEIVE_MONEY,8,False,casual,
+,aaj ka total kharcha ek lakh paanch hazaar hua,"Total expense today ₹1,05,000",EXPENSE_LOG,105000,False,formal,
+,usne chheh bheja kya,Did he send ₹6,RECEIVE_MONEY,6,False,casual,range:ones
+,bhai rent ke liye ek hazaar do sau chahiye,"Need ₹1,200 for rent",SEND_MONEY,1200,False,casual,range:compound
+,yaar ek hazaar do sau aate aate teen din ho gaye,"Three days waiting for ₹1,200",RECEIVE_MONEY,1200,False,casual,
+,ek ka transaction complete hua kya,Did ₹1 transaction complete,RECEIVE_MONEY,1,False,formal,
+,account balance check karna tha,Wanted to check account balance,CHECK_BALANCE,,False,formal,
+,balance statement chahiye,Need balance statement,CHECK_BALANCE,,False,formal,
+,aaj ka total kharcha aath sau hua,Total expense today ₹800,EXPENSE_LOG,800,False,formal,
+,phonepe pe bhejo ek lakh,"Send ₹1,00,000 on PhonePe",SEND_MONEY,100000,False,casual,
+,gpay kar do do hazaar,"GPay ₹2,000",SEND_MONEY,2000,False,casual,range:thousands
+,account mein das hazaar dikha raha hai kya,"Is ₹10,000 showing in account",RECEIVE_MONEY,10000,False,formal,
+,do lakh ka wholesale maal liya,"Bought wholesale stock of ₹2,00,000",EXPENSE_LOG,200000,False,casual,
+,teen ka transaction complete hua kya,Did ₹3 transaction complete,RECEIVE_MONEY,3,False,formal,
+,mujhe bees receive karna hai,I need to receive ₹20,RECEIVE_MONEY,20,False,formal,range:tens
+,usne do nahi kiya abhi tak,He hasn't done it yet,RECEIVE_MONEY,,True,casual,do=VERB:negation
+,do teen cheezein kharidi aaj,Bought two or three things today,EXPENSE_LOG,,True,casual,do=APPROXIMATION
+,mera balance kitna hai,What is my balance,CHECK_BALANCE,,False,casual,
+,sau ka payment karna hai,Need to make payment of ₹100,SEND_MONEY,100,False,formal,
+,ek gaya petrol mein,₹1 spent on petrol,EXPENSE_LOG,1,False,casual,
+,auto ka kiraya chheh laga,Auto fare was ₹6,EXPENSE_LOG,6,False,casual,
+,saat mein bill settle ho jayega,Bill of ₹7 will be settled,BILL_PAYMENT,7,False,formal,
+,do hazaar paanch sau ka samaan liya aaj,"Bought goods worth ₹2,500 today",EXPENSE_LOG,2500,False,casual,
+,das ka transaction karo abhi,Do transaction of ₹10 now,SEND_MONEY,10,False,urgent,range:tens
+,do diya kya tune transaction,Did you complete the transaction,SEND_MONEY,,True,casual,do=VERB:past
+,kitna balance bacha hai,How much balance remaining,CHECK_BALANCE,,False,casual,
+,chaar ka payment karna hai,Need to make payment of ₹4,SEND_MONEY,4,False,formal,
+,available balance kitna hai,How much available balance,CHECK_BALANCE,,False,formal,
+,ek lakh ka samaan liya aaj,"Bought goods worth ₹1,00,000 today",EXPENSE_LOG,100000,False,casual,
+,yaar ek lakh transfer kar,"Transfer ₹1,00,000",SEND_MONEY,100000,False,casual,range:lakhs
+,balance dikha,Show balance,CHECK_BALANCE,,False,casual,
+,bhai tees ka recharge kar de,Bro do recharge of ₹30,BILL_PAYMENT,30,False,casual,
+,pani ka bill bees tha,Water bill was ₹20,BILL_PAYMENT,20,False,casual,
+,pani ka bill ek hazaar tha,"Water bill was ₹1,000",BILL_PAYMENT,1000,False,casual,
+,bijli ka bill bharo ek,Pay electricity bill ₹1,BILL_PAYMENT,1,False,casual,
+,dukan ka kiraya das hazaar diya,"Paid shop rent ₹10,000",EXPENSE_LOG,10000,False,casual,
+,das hazaar paanch sau bhejo usse,"Send ₹10,500",SEND_MONEY,10500,False,casual,
+,internet bill bees dena hai,Need to pay internet bill ₹20,BILL_PAYMENT,20,False,formal,
+,bijli ka bill teen hazaar paanch sau aaya,"Electricity bill came to ₹3,500",EXPENSE_LOG,3500,False,casual,
+,DTH recharge karo das hazaar paanch sau ka,"Do DTH recharge of ₹10,500",BILL_PAYMENT,10500,False,casual,
+,DTH recharge karo do hazaar ka,"Do DTH recharge of ₹2,000",BILL_PAYMENT,2000,False,casual,
+,do sau aaya kya mere account mein,Did ₹200 arrive in my account,RECEIVE_MONEY,200,False,casual,
+,mujhe bees transfer karne hain,I need to transfer ₹20,SEND_MONEY,20,False,formal,
+,teen hazaar paanch sau pending hai abhi tak,"₹3,500 is still pending",RECEIVE_MONEY,3500,False,casual,
+,uska ek lakh paanch hazaar baaki hai bhej,"Send remaining ₹1,05,000",SEND_MONEY,105000,False,casual,
+,DTH recharge karo das hazaar ka,"Do DTH recharge of ₹10,000",BILL_PAYMENT,10000,False,casual,
+,aath ka mobile recharge chahiye,Need mobile recharge of ₹8,BILL_PAYMENT,8,False,casual,
+,do ka recharge karna hai,Need to recharge for ₹2,BILL_PAYMENT,2,False,casual,
+,usne ek hazaar bheja kya,"Did he send ₹1,000",RECEIVE_MONEY,1000,False,casual,
+,mummy ko teen hazaar paanch sau bhejne hain,"Send ₹3,500 to mummy",SEND_MONEY,3500,False,casual,
+,bhai chheh bhej de,Send ₹6,SEND_MONEY,6,False,casual,
+,uska teen baaki hai bhej,Send remaining ₹3,SEND_MONEY,3,False,casual,
+,gpay kar do paanch sau,GPay ₹500,SEND_MONEY,500,False,casual,range:hundreds
+,do na yaar transfer abhi,Please do the transfer now,SEND_MONEY,,True,casual,do=VERB:imperative
+,abhi chheh bhejo,Send ₹6 now,SEND_MONEY,6,False,urgent,range:ones
+,dost ko do wapas karne hain,Return ₹2 to friend,SEND_MONEY,2,False,casual,range:ones
+,mujhe das receive karna hai,I need to receive ₹10,RECEIVE_MONEY,10,False,formal,
+,transfer kar de das abhi,Transfer ₹10 now,SEND_MONEY,10,False,urgent,
+,mummy ko sau bhejne hain,Send ₹100 to mummy,SEND_MONEY,100,False,casual,
+,bhai do hazaar paanch sau kab aayega,"When will ₹2,500 arrive bro",RECEIVE_MONEY,2500,False,casual,
+,paanch hazaar do sau aaya kya mere account mein,"Did ₹5,200 arrive in my account",RECEIVE_MONEY,5200,False,casual,
+,bhai rent ke liye ek chahiye,Need ₹1 for rent,SEND_MONEY,1,False,casual,
+,account mein kitne paise hain,How much money in account,CHECK_BALANCE,,False,casual,
+,chaar bhijwa de usse,Send ₹4 to him,SEND_MONEY,4,False,casual,range:ones
+,account balance check karna tha,Wanted to check account balance,CHECK_BALANCE,,False,formal,
+,das hazaar bhijwa de usse,"Send ₹10,000 to him",SEND_MONEY,10000,False,casual,
+,mera teen nahi aaya yaar,My ₹3 hasn't arrived,RECEIVE_MONEY,3,False,casual,range:ones
+,bhai ek bhej de,Send ₹1,SEND_MONEY,1,False,casual,range:ones
+,pachaas bhejo usse,Send ₹50,SEND_MONEY,50,False,casual,
+,abhi chaar bhejo,Send ₹4 now,SEND_MONEY,4,False,urgent,
+,bhai rent ke liye saat chahiye,Need ₹7 for rent,SEND_MONEY,7,False,casual,
+,paanch ka recharge karna hai,Need to recharge for ₹5,BILL_PAYMENT,5,False,casual,
+,chheh ka postpaid bill pay karo,Pay postpaid bill of ₹6,BILL_PAYMENT,6,False,formal,
+,mera balance kitna hai,What is my balance,CHECK_BALANCE,,False,casual,
+,gpay kar do teen,GPay ₹3,SEND_MONEY,3,False,casual,
+,uska pachaas baaki hai bhej,Send remaining ₹50,SEND_MONEY,50,False,casual,
+,account mein pachattar dikha raha hai kya,Is ₹75 showing in account,RECEIVE_MONEY,75,False,formal,range:tens
+,khana kharid liya paanch hazaar ka,"Bought food worth ₹5,000",EXPENSE_LOG,5000,False,casual,
+,pani ka bill do hazaar paanch sau tha,"Water bill was ₹2,500",BILL_PAYMENT,2500,False,casual,
+,available balance kitna hai,How much available balance,CHECK_BALANCE,,False,formal,
+,paanch aaya kya mere account mein,Did ₹5 arrive in my account,RECEIVE_MONEY,5,False,casual,
+,do sau ka wholesale maal liya,Bought wholesale stock of ₹200,EXPENSE_LOG,200,False,casual,
+,abhi aath sau bhejo,Send ₹800 now,SEND_MONEY,800,False,urgent,
+,paanch lakh receive hua kya,"Was ₹5,00,000 received",RECEIVE_MONEY,500000,False,casual,
+,kitna balance bacha hai,How much balance remaining,CHECK_BALANCE,,False,casual,
+,bijli ka bill nau aaya,Electricity bill came to ₹9,EXPENSE_LOG,9,False,casual,
+,ek baar nau bhej,Send ₹9 once,SEND_MONEY,9,False,casual,
+,yaar paanch hazaar aate aate teen din ho gaye,"Three days waiting for ₹5,000",RECEIVE_MONEY,5000,False,casual,
+,mujhe paanch hazaar transfer karne hain,"I need to transfer ₹5,000",SEND_MONEY,5000,False,formal,range:thousands
+,do hazaar kharch ho gaya yaar,"₹2,000 got spent",EXPENSE_LOG,2000,False,casual,
+,mujhe tees receive karna hai,I need to receive ₹30,RECEIVE_MONEY,30,False,formal,range:tens
+,do lakh ka payment karna hai,"Need to make payment of ₹2,00,000",SEND_MONEY,200000,False,formal,range:lakhs
+,do sau ka gas bill aaya hai,Gas bill of ₹200 has arrived,BILL_PAYMENT,200,False,casual,
+,mujhe do lakh teen hazaar transfer karne hain,"I need to transfer ₹2,03,000",SEND_MONEY,203000,False,formal,
+,dost ko do lakh wapas karne hain,"Return ₹2,00,000 to friend",SEND_MONEY,200000,False,casual,
+,usse bhejo pachees hazaar,"Send ₹25,000 to him",SEND_MONEY,25000,False,casual,
+,balance statement chahiye,Need balance statement,CHECK_BALANCE,,False,formal,
+,bijli ka bill bharo paanch hazaar,"Pay electricity bill ₹5,000",BILL_PAYMENT,5000,False,casual,
+,DTH recharge karo aath sau ka,Do DTH recharge of ₹800,BILL_PAYMENT,800,False,casual,
+,auto ka kiraya do laga,Auto fare was ₹2,EXPENSE_LOG,2,False,casual,
+,mujhe aath sau receive karna hai,I need to receive ₹800,RECEIVE_MONEY,800,False,formal,
+,paanch hazaar do sau ka wholesale maal liya,"Bought wholesale stock of ₹5,200",EXPENSE_LOG,5200,False,casual,
+,paanch hazaar bhejo usse,"Send ₹5,000",SEND_MONEY,5000,False,casual,
+,mera das nahi aaya yaar,My ₹10 hasn't arrived,RECEIVE_MONEY,10,False,casual,range:tens
+,paanch hazaar do sau ka samaan liya aaj,"Bought goods worth ₹5,200 today",EXPENSE_LOG,5200,False,casual,
+,bhai balance low ho gaya kya,Has balance gone low bro,CHECK_BALANCE,,False,casual,
+,account balance check karna tha,Wanted to check account balance,CHECK_BALANCE,,False,formal,
+,aaj do sau ka kharcha hua,Spent ₹200 today,EXPENSE_LOG,200,False,casual,
+,transfer kar de das hazaar abhi,"Transfer ₹10,000 now",SEND_MONEY,10000,False,urgent,
+,ek baar teen bhej,Send ₹3 once,SEND_MONEY,3,False,casual,range:ones
+,mujhe ek lakh paanch hazaar transfer karne hain,"I need to transfer ₹1,05,000",SEND_MONEY,105000,False,formal,range:lakhs
+,bhai teen bhej de,Send ₹3,SEND_MONEY,3,False,casual,
+,mujhe do sau transfer karne hain,I need to transfer ₹200,SEND_MONEY,200,False,formal,
+,yaar tees transfer kar,Transfer ₹30,SEND_MONEY,30,False,casual,
+,bhai das hazaar paanch sau kab aayega,"When will ₹10,500 arrive bro",RECEIVE_MONEY,10500,False,casual,
+,paanch hazaar do sau ka gas bill aaya hai,"Gas bill of ₹5,200 has arrived",BILL_PAYMENT,5200,False,casual,
+,do lakh ka mobile recharge chahiye,"Need mobile recharge of ₹2,00,000",BILL_PAYMENT,200000,False,casual,
+,mera ek lakh paanch hazaar nahi aaya yaar,"My ₹1,05,000 hasn't arrived",RECEIVE_MONEY,105000,False,casual,
+,bhai ek lakh kab aayega,"When will ₹1,00,000 arrive bro",RECEIVE_MONEY,100000,False,casual,
+,gpay kar do paanch hazaar do sau,"GPay ₹5,200",SEND_MONEY,5200,False,casual,
+,available balance kitna hai,How much available balance,CHECK_BALANCE,,False,formal,
+,tees de do usse please,Please give ₹30,SEND_MONEY,30,False,casual,
+,account mein chaar dikha raha hai kya,Is ₹4 showing in account,RECEIVE_MONEY,4,False,formal,
+,mera balance kitna hai,What is my balance,CHECK_BALANCE,,False,casual,
+,das hazaar ka mobile recharge chahiye,"Need mobile recharge of ₹10,000",BILL_PAYMENT,10000,False,casual,
+,mera bees nahi aaya yaar,My ₹20 hasn't arrived,RECEIVE_MONEY,20,False,casual,
+,do diya kya bill,Was the bill paid,BILL_PAYMENT,,True,casual,do=VERB:past
+,balance dikha,Show balance,CHECK_BALANCE,,False,casual,
+,dukan ka kiraya bees diya,Paid shop rent ₹20,EXPENSE_LOG,20,False,casual,
+,balance check karo,Check balance,CHECK_BALANCE,,False,casual,
+,bijli ka bill do na yaar,Please pay the electricity bill,BILL_PAYMENT,,True,casual,do=VERB:imperative
+,yaar aath sau transfer kar,Transfer ₹800,SEND_MONEY,800,False,casual,
+,do lakh teen hazaar kharch ho gaya yaar,"₹2,03,000 got spent",EXPENSE_LOG,203000,False,casual,
+,do lakh ka transaction complete hua kya,"Did ₹2,00,000 transaction complete",RECEIVE_MONEY,200000,False,formal,
+,usne saat bheja kya,Did he send ₹7,RECEIVE_MONEY,7,False,casual,
+,das ka gas bill aaya hai,Gas bill of ₹10 has arrived,BILL_PAYMENT,10,False,casual,
+,dukan ka kiraya paanch hazaar diya,"Paid shop rent ₹5,000",EXPENSE_LOG,5000,False,casual,
+,pachattar ka recharge karna hai,Need to recharge for ₹75,BILL_PAYMENT,75,False,casual,
+,bhai balance low ho gaya kya,Has balance gone low bro,CHECK_BALANCE,,False,casual,
+,account mein kitne paise hain,How much money in account,CHECK_BALANCE,,False,casual,
+,aaj paanch lakh ka kharcha hua,"Spent ₹5,00,000 today",EXPENSE_LOG,500000,False,casual,
+,pachaas ka transaction karo abhi,Do transaction of ₹50 now,SEND_MONEY,50,False,urgent,range:tens
+,dost ko nau wapas karne hain,Return ₹9 to friend,SEND_MONEY,9,False,casual,range:ones
+,jaldi teen hazaar paanch sau transfer kar yaar,"Transfer ₹3,500 quickly",SEND_MONEY,3500,False,urgent,
+,kitna balance bacha hai,How much balance remaining,CHECK_BALANCE,,False,casual,
+,ek lakh mein bill settle ho jayega,"Bill of ₹1,00,000 will be settled",BILL_PAYMENT,100000,False,formal,
+,account mein kitne paise hain,How much money in account,CHECK_BALANCE,,False,casual,
+,ek ka wholesale maal liya,Bought wholesale stock of ₹1,EXPENSE_LOG,1,False,casual,
+,chheh ka transaction complete hua kya,Did ₹6 transaction complete,RECEIVE_MONEY,6,False,formal,
+,balance statement chahiye,Need balance statement,CHECK_BALANCE,,False,formal,
+,do sau ka postpaid bill pay karo,Pay postpaid bill of ₹200,BILL_PAYMENT,200,False,formal,
+,balance check karo,Check balance,CHECK_BALANCE,,False,casual,
+,do baar check kiya balance,Checked balance twice,CHECK_BALANCE,,True,casual,do=ADVERB:twice_not_number
+,paanch receive hua kya,Was ₹5 received,RECEIVE_MONEY,5,False,casual,range:ones
+,do lakh teen hazaar receive hua kya,"Was ₹2,03,000 received",RECEIVE_MONEY,203000,False,casual,
+,khana kharid liya ek hazaar do sau ka,"Bought food worth ₹1,200",EXPENSE_LOG,1200,False,casual,
+,abhi balance kya hai,What is current balance,CHECK_BALANCE,,False,casual,
+,bijli ka bill bharo do lakh teen hazaar,"Pay electricity bill ₹2,03,000",BILL_PAYMENT,203000,False,casual,
+,ek baar teen hazaar paanch sau bhej,"Send ₹3,500 once",SEND_MONEY,3500,False,casual,range:compound
+,aaj das ka kharcha hua,Spent ₹10 today,EXPENSE_LOG,10,False,casual,
+,abhi balance kya hai,What is current balance,CHECK_BALANCE,,False,casual,
+,mera balance kitna hai,What is my balance,CHECK_BALANCE,,False,casual,
+,usne ek bheja kya,Did he send ₹1,RECEIVE_MONEY,1,False,casual,
+,gpay kar do paanch,GPay ₹5,SEND_MONEY,5,False,casual,range:ones
+,paanch lakh ka gas bill aaya hai,"Gas bill of ₹5,00,000 has arrived",BILL_PAYMENT,500000,False,casual,
+,account mein do hazaar paanch sau bhejne hain,"Need to send ₹2,500 to account",SEND_MONEY,2500,False,formal,
+,khana kharid liya do lakh teen hazaar ka,"Bought food worth ₹2,03,000",EXPENSE_LOG,203000,False,casual,
+,aaj ka total kharcha paanch hua,Total expense today ₹5,EXPENSE_LOG,5,False,formal,
+,teen hazaar paanch sau receive hua kya,"Was ₹3,500 received",RECEIVE_MONEY,3500,False,casual,
+,bijli ka bill pachattar aaya,Electricity bill came to ₹75,EXPENSE_LOG,75,False,casual,
+,paanch de do usse please,Please give ₹5,SEND_MONEY,5,False,casual,
+,yaar ek transfer kar,Transfer ₹1,SEND_MONEY,1,False,casual,
+,chaar gaya petrol mein,₹4 spent on petrol,EXPENSE_LOG,4,False,casual,
+,paanch sau kharch ho gaya yaar,₹500 got spent,EXPENSE_LOG,500,False,casual,
+,aaj ka total kharcha ek hazaar hua,"Total expense today ₹1,000",EXPENSE_LOG,1000,False,formal,
+,pachattar ka transaction karo abhi,Do transaction of ₹75 now,SEND_MONEY,75,False,urgent,
+,account mein pachaas bhejne hain,Need to send ₹50 to account,SEND_MONEY,50,False,formal,
+,ek baar das hazaar bhej,"Send ₹10,000 once",SEND_MONEY,10000,False,casual,range:thousands
+,mujhe ek lakh receive karna hai,"I need to receive ₹1,00,000",RECEIVE_MONEY,100000,False,formal,
+,mera pachaas nahi aaya yaar,My ₹50 hasn't arrived,RECEIVE_MONEY,50,False,casual,
+,dukan ka kiraya tees diya,Paid shop rent ₹30,EXPENSE_LOG,30,False,casual,
+,subah das hazaar kharcha kiya,"Spent ₹10,000 in morning",EXPENSE_LOG,10000,False,casual,
+,bhai pachees hazaar ka recharge kar de,"Bro do recharge of ₹25,000",BILL_PAYMENT,25000,False,casual,
+,paanch hazaar de do usse please,"Please give ₹5,000",SEND_MONEY,5000,False,casual,
+,saat gaya petrol mein,₹7 spent on petrol,EXPENSE_LOG,7,False,casual,
+,ek baar ek lakh bhej,"Send ₹1,00,000 once",SEND_MONEY,100000,False,casual,
+,pachees hazaar pending hai abhi tak,"₹25,000 is still pending",RECEIVE_MONEY,25000,False,casual,
+,bhai chaar bhej de,Send ₹4,SEND_MONEY,4,False,casual,
+,do lakh mein bill settle ho jayega,"Bill of ₹2,00,000 will be settled",BILL_PAYMENT,200000,False,formal,
+,mummy ko pachattar bhejne hain,Send ₹75 to mummy,SEND_MONEY,75,False,casual,range:tens
+,subah teen kharcha kiya,Spent ₹3 in morning,EXPENSE_LOG,3,False,casual,
+,bhai do de usse paisa,Bro give him the money,SEND_MONEY,,True,casual,do=VERB:give
+,pachaas ka mobile recharge chahiye,Need mobile recharge of ₹50,BILL_PAYMENT,50,False,casual,
+,teen hazaar paanch sau ki dawai leni thi,"Had to buy medicine worth ₹3,500",EXPENSE_LOG,3500,False,casual,
+,phonepe pe bhejo sau,Send ₹100 on PhonePe,SEND_MONEY,100,False,casual,range:hundreds
+,yaar tees aate aate teen din ho gaye,Three days waiting for ₹30,RECEIVE_MONEY,30,False,casual,
+,ek hazaar do sau ka recharge karna hai,"Need to recharge for ₹1,200",BILL_PAYMENT,1200,False,casual,
+,bhai rent ke liye ek hazaar chahiye,"Need ₹1,000 for rent",SEND_MONEY,1000,False,casual,range:thousands
+,paanch sau ki dawai leni thi,Had to buy medicine worth ₹500,EXPENSE_LOG,500,False,casual,
+,abhi balance kya hai,What is current balance,CHECK_BALANCE,,False,casual,
+,bhai rent ke liye tees chahiye,Need ₹30 for rent,SEND_MONEY,30,False,casual,
+,available balance kitna hai,How much available balance,CHECK_BALANCE,,False,formal,
+,nau ka payment karna hai,Need to make payment of ₹9,SEND_MONEY,9,False,formal,
+,subah aath kharcha kiya,Spent ₹8 in morning,EXPENSE_LOG,8,False,casual,
+,kitna balance bacha hai,How much balance remaining,CHECK_BALANCE,,False,casual,
+,transfer kar de aath abhi,Transfer ₹8 now,SEND_MONEY,8,False,urgent,
+,bhai chaar bhej de,Send ₹4,SEND_MONEY,4,False,casual,
+,paanch hazaar ka transaction karo abhi,"Do transaction of ₹5,000 now",SEND_MONEY,5000,False,urgent,
+,subah pachees hazaar kharcha kiya,"Spent ₹25,000 in morning",EXPENSE_LOG,25000,False,casual,
+,jaldi pachaas transfer kar yaar,Transfer ₹50 quickly,SEND_MONEY,50,False,urgent,
+,bhai ek kab aayega,When will ₹1 arrive bro,RECEIVE_MONEY,1,False,casual,range:ones
+,usse bhejo ek lakh paanch hazaar,"Send ₹1,05,000 to him",SEND_MONEY,105000,False,casual,
+,nau bhijwa de usse,Send ₹9 to him,SEND_MONEY,9,False,casual,
+,ek baar do sau bhej,Send ₹200 once,SEND_MONEY,200,False,casual,
+,aaj do sau ka kharcha hua,Spent ₹200 today,EXPENSE_LOG,200,False,casual,
+,aath receive hua kya,Was ₹8 received,RECEIVE_MONEY,8,False,casual,range:ones
+,gpay kar do tees,GPay ₹30,SEND_MONEY,30,False,casual,range:tens
+,mummy ko do hazaar paanch sau bhejne hain,"Send ₹2,500 to mummy",SEND_MONEY,2500,False,casual,range:compound
+,dost ko ek wapas karne hain,Return ₹1 to friend,SEND_MONEY,1,False,casual,
+,bijli ka bill aath sau aaya,Electricity bill came to ₹800,EXPENSE_LOG,800,False,casual,
+,dost ko ek lakh paanch hazaar wapas karne hain,"Return ₹1,05,000 to friend",SEND_MONEY,105000,False,casual,
+,paanch sau pending hai abhi tak,₹500 is still pending,RECEIVE_MONEY,500,False,casual,
+,dost ko do sau wapas karne hain,Return ₹200 to friend,SEND_MONEY,200,False,casual,range:hundreds
+,balance dikha,Show balance,CHECK_BALANCE,,False,casual,
+,tees ki dawai leni thi,Had to buy medicine worth ₹30,EXPENSE_LOG,30,False,casual,
+,abhi paanch hazaar do sau bhejo,"Send ₹5,200 now",SEND_MONEY,5200,False,urgent,
+,balance statement chahiye,Need balance statement,CHECK_BALANCE,,False,formal,
+,ek hazaar bhejo usse,"Send ₹1,000",SEND_MONEY,1000,False,casual,
+,bhai do lakh teen hazaar ka recharge kar de,"Bro do recharge of ₹2,03,000",BILL_PAYMENT,203000,False,casual,
+,abhi das hazaar bhejo,"Send ₹10,000 now",SEND_MONEY,10000,False,urgent,
+,account mein kitne paise hain,How much money in account,CHECK_BALANCE,,False,casual,
+,bhai pachaas kab aayega,When will ₹50 arrive bro,RECEIVE_MONEY,50,False,casual,range:tens
+,yaar ek baar do kar transfer,Bro do the transfer once,SEND_MONEY,,True,casual,do=VERB:imperative
+,auto ka kiraya teen laga,Auto fare was ₹3,EXPENSE_LOG,3,False,casual,
+,mujhe nau receive karna hai,I need to receive ₹9,RECEIVE_MONEY,9,False,formal,
+,do hazaar receive hua kya,"Was ₹2,000 received",RECEIVE_MONEY,2000,False,casual,
+,bijli ka bill bharo chaar,Pay electricity bill ₹4,BILL_PAYMENT,4,False,casual,
+,mummy ko aath bhejne hain,Send ₹8 to mummy,SEND_MONEY,8,False,casual,range:ones
+,account mein do lakh teen hazaar bhejne hain,"Need to send ₹2,03,000 to account",SEND_MONEY,203000,False,formal,range:lakhs
+,gpay kar do saat,GPay ₹7,SEND_MONEY,7,False,casual,range:ones
+,ek hazaar ka postpaid bill pay karo,"Pay postpaid bill of ₹1,000",BILL_PAYMENT,1000,False,formal,
+,balance dikha,Show balance,CHECK_BALANCE,,False,casual,
+,sau ki dawai leni thi,Had to buy medicine worth ₹100,EXPENSE_LOG,100,False,casual,
+,mujhe saat receive karna hai,I need to receive ₹7,RECEIVE_MONEY,7,False,formal,range:ones
+,bhai balance low ho gaya kya,Has balance gone low bro,CHECK_BALANCE,,False,casual,
+,jaldi paanch lakh transfer kar yaar,"Transfer ₹5,00,000 quickly",SEND_MONEY,500000,False,urgent,
+,account mein ek hazaar do sau dikha raha hai kya,"Is ₹1,200 showing in account",RECEIVE_MONEY,1200,False,formal,
+,pachees hazaar ka recharge karna hai,"Need to recharge for ₹25,000",BILL_PAYMENT,25000,False,casual,
+,pachattar pending hai abhi tak,₹75 is still pending,RECEIVE_MONEY,75,False,casual,
+,internet bill ek lakh paanch hazaar dena hai,"Need to pay internet bill ₹1,05,000",BILL_PAYMENT,105000,False,formal,
+,yaar paanch hazaar transfer kar,"Transfer ₹5,000",SEND_MONEY,5000,False,casual,
+,jaldi aath sau transfer kar yaar,Transfer ₹800 quickly,SEND_MONEY,800,False,urgent,range:hundreds
+,pani ka bill teen tha,Water bill was ₹3,BILL_PAYMENT,3,False,casual,
+,phonepe pe bhejo do lakh,"Send ₹2,00,000 on PhonePe",SEND_MONEY,200000,False,casual,
+,sau aaya kya mere account mein,Did ₹100 arrive in my account,RECEIVE_MONEY,100,False,casual,
+,internet bill ek lakh paanch hazaar dena hai,"Need to pay internet bill ₹1,05,000",BILL_PAYMENT,105000,False,formal,
+,yaar do hazaar paanch sau aate aate teen din ho gaye,"Three days waiting for ₹2,500",RECEIVE_MONEY,2500,False,casual,
+,DTH recharge karo aath sau ka,Do DTH recharge of ₹800,BILL_PAYMENT,800,False,casual,
+,teen gaya petrol mein,₹3 spent on petrol,EXPENSE_LOG,3,False,casual,
+,account mein do dikha raha hai kya,Is ₹2 showing in account,RECEIVE_MONEY,2,False,formal,range:ones
+,gpay kar do ek hazaar do sau,"GPay ₹1,200",SEND_MONEY,1200,False,casual,
+,ek do minute mein dekh balance,Check balance in a minute or two,CHECK_BALANCE,,True,casual,do=FILLER:approximate
+,bhai nau ka recharge kar de,Bro do recharge of ₹9,BILL_PAYMENT,9,False,casual,
+,abhi balance kya hai,What is current balance,CHECK_BALANCE,,False,casual,
+,ek baar paanch lakh bhej,"Send ₹5,00,000 once",SEND_MONEY,500000,False,casual,range:lakhs
+,aaj do baar kharcha hua,Spent twice today,EXPENSE_LOG,,True,casual,do=ADVERB:frequency
+,account balance check karna tha,Wanted to check account balance,CHECK_BALANCE,,False,formal,
+,mujhe paanch hazaar do sau transfer karne hain,"I need to transfer ₹5,200",SEND_MONEY,5200,False,formal,range:compound
+,mujhe pachees hazaar transfer karne hain,"I need to transfer ₹25,000",SEND_MONEY,25000,False,formal,range:thousands
+,bees mein bill settle ho jayega,Bill of ₹20 will be settled,BILL_PAYMENT,20,False,formal,
+,usne nau bheja kya,Did he send ₹9,RECEIVE_MONEY,9,False,casual,range:ones
+,pachaas kharch ho gaya yaar,₹50 got spent,EXPENSE_LOG,50,False,casual,
+,auto ka kiraya paanch hazaar laga,"Auto fare was ₹5,000",EXPENSE_LOG,5000,False,casual,
+,paanch sau bhijwa de usse,Send ₹500 to him,SEND_MONEY,500,False,casual,
+,please do it abhi bhej,Please send it now,SEND_MONEY,,True,casual,do=ENGLISH_VERB
+,pachaas ka samaan liya aaj,Bought goods worth ₹50 today,EXPENSE_LOG,50,False,casual,
+,account mein do hazaar bhejne hain,"Need to send ₹2,000 to account",SEND_MONEY,2000,False,formal,
+,internet bill teen hazaar paanch sau dena hai,"Need to pay internet bill ₹3,500",BILL_PAYMENT,3500,False,formal,
+,bijli ka bill bharo tees,Pay electricity bill ₹30,BILL_PAYMENT,30,False,casual,
+,balance check karo,Check balance,CHECK_BALANCE,,False,casual,
+,usse bhejo do,Send ₹2 to him,SEND_MONEY,2,False,casual,
+,paanch sau ka postpaid bill pay karo,Pay postpaid bill of ₹500,BILL_PAYMENT,500,False,formal,
+,ek hazaar ka gas bill aaya hai,"Gas bill of ₹1,000 has arrived",BILL_PAYMENT,1000,False,casual,

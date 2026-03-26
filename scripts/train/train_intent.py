@@ -42,7 +42,8 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 # ──────────────────────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────────────────────
-BASE_DIR   = Path(r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR")
+# Repo root = two levels up from scripts/train/train_intent.py
+BASE_DIR   = Path(__file__).resolve().parents[2]
 FIN_DATA   = BASE_DIR / "data" / "processed" / "financial_benchmark"
 MODEL_OUT  = BASE_DIR / "models" / "adapters" / "distilbert_intent"
 BASE_MODEL = "distilbert-base-multilingual-cased"

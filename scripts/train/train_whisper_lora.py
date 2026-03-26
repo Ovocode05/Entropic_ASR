@@ -52,7 +52,8 @@ from transformers import (
 # ──────────────────────────────────────────────────────────────────────────────
 # Paths & Defaults
 # ──────────────────────────────────────────────────────────────────────────────
-BASE_DIR     = Path(r"C:\Users\HP\GitMakesMeHappy\Entropic_ASR")
+# Repo root = two levels up from scripts/train/train_whisper_lora.py
+BASE_DIR     = Path(__file__).resolve().parents[2]
 ASR_DATA     = BASE_DIR / "data" / "processed" / "hinglish_asr"
 MODEL_OUT    = BASE_DIR / "models" / "adapters" / "whisper_lora"
 BASE_MODEL   = "openai/whisper-small"
@@ -81,8 +82,36 @@ class WhisperDataCollator:
     processor      : WhisperProcessor
     max_label_len  : int = 448    # Whisper tokenizer max
 
+    def _resolve_path(self, path: str) -> str:
+        """Translate stored absolute path (any OS) to the current machine.
+        Handles Windows paths (C:\\...) running on Linux by splitting on \\ and /.
+        """
+        import re
+        p = Path(path)
+        if p.exists():
+            return str(p)   # path already valid on this machine
+
+        # Split on BOTH separators (critical: Linux won't split Windows \\ paths)
+        parts = re.split(r'[/\\]+', path)
+
+        # Find 'data/raw' anchor and rebuild from repo root
+        for i, part in enumerate(parts):
+            if part == "data" and i + 1 < len(parts) and parts[i + 1] == "raw":
+                rel = Path(*parts[i:])
+                remapped = BASE_DIR / rel
+                if remapped.exists():
+                    return str(remapped)
+
+        # Last resort: filename only, look in audio dir
+        candidate = BASE_DIR / "data" / "raw" / "audio" / parts[-1]
+        if candidate.exists():
+            return str(candidate)
+
+        return path  # let soundfile raise the real error
+
     def _load_audio(self, path: str) -> np.ndarray:
         """Load WAV file with soundfile (no torchcodec needed)."""
+        path = self._resolve_path(path)   # translate Windows→Linux paths if needed
         arr, sr = sf.read(path, dtype="float32")
         if arr.ndim > 1:          # stereo → mono
             arr = arr.mean(axis=1)
