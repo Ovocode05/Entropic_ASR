@@ -148,9 +148,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Build HuggingFace DatasetDicts from unified manifest CSV."
     )
-    parser.add_argument("--manifest",    default=DEFAULT_MANIFEST)
-    parser.add_argument("--output-asr",  default=DEFAULT_OUTPUT_ASR)
-    parser.add_argument("--output-fin",  default=DEFAULT_OUTPUT_FIN)
+    parser.add_argument("--manifest",      default=DEFAULT_MANIFEST)
+    parser.add_argument("--output-asr",    default=DEFAULT_OUTPUT_ASR)
+    parser.add_argument("--output-fin",    default=DEFAULT_OUTPUT_FIN)
+    parser.add_argument("--force-rebuild", action="store_true",
+                        help="Force rebuild even if train split already exists")
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest)
@@ -177,8 +179,15 @@ def main():
     df_synth = df[df["source"] == "synthetic"].copy()
 
     if len(df_mucs) > 0:
-        Path(args.output_asr).mkdir(parents=True, exist_ok=True)
-        build_asr_dataset(df_mucs, Path(args.output_asr))
+        asr_out = Path(args.output_asr)
+        train_dir = asr_out / "train"
+        if train_dir.exists() and not args.force_rebuild:
+            print(f"\n[SKIP] hinglish_asr already has a 'train' split at {train_dir}")
+            print(f"       Use --force-rebuild to overwrite it.")
+            print(f"       Skipping ASR dataset rebuild to preserve existing {len(list(train_dir.glob('*.arrow')))} train shards.")
+        else:
+            asr_out.mkdir(parents=True, exist_ok=True)
+            build_asr_dataset(df_mucs, asr_out)
     else:
         print("\n[INFO] No MUCS rows in manifest — skipping ASR dataset.")
 
