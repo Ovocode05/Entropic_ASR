@@ -45,10 +45,18 @@ class EntropicPipeline:
         self.itn_model = DistilBertForTokenClassification.from_pretrained(str(ITN_MODEL)).to(DEVICE)
         self.itn_model.eval()
 
-        print(" [3/3] DistilBERT Intent Classifier...")
+        print(" [3/4] DistilBERT Intent Classifier...")
         self.intent_tok = AutoTokenizer.from_pretrained(str(INTENT_MODEL))
         self.intent_model = AutoModelForSequenceClassification.from_pretrained(str(INTENT_MODEL)).to(DEVICE)
         self.intent_model.eval()
+
+        print(" [4/4] Silero VAD (Voice Activity Detection)...")
+        try:
+            self.vad_model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', force_reload=False)
+            self.get_speech_timestamps = utils[0]
+        except Exception as e:
+            print(f"  [WARN] Failed to pull Silero VAD from Github (Networking?): {e}")
+            self.vad_model = None
 
         # Load Intent Config for thresholds and labels
         conf = json.loads((INTENT_MODEL / "intent_config.json").read_text())
@@ -69,6 +77,15 @@ class EntropicPipeline:
         # 1. ASR (Acoustic -> Roman Hinglish)
         # ==========================================
         audio, sr = librosa.load(audio_path, sr=16000, mono=True)
+        
+        # Apply Neural VAD (Silero) if successfully loaded
+        if getattr(self, "vad_model", None) is not None:
+            audio_tensor = torch.tensor(audio)
+            timestamps = self.get_speech_timestamps(audio_tensor, self.vad_model, sampling_rate=16000)
+            if timestamps:
+                # Reconstruct speech parts only
+                audio = torch.cat([audio_tensor[ts['start']:ts['end']] for ts in timestamps]).numpy()
+
         inputs = self.wh_proc(audio, sampling_rate=16000, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
             pred_ids = self.wh_model.generate(
