@@ -48,6 +48,7 @@ class EntropicPipeline:
         
         print(" [1/3] Whisper ASR + LoRA...")
         self.wh_proc = WhisperProcessor.from_pretrained("openai/whisper-small", local_files_only=True)
+        self.forced_decoder_ids = self.wh_proc.get_decoder_prompt_ids(language="hi", task="transcribe")
         wh_base = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small", local_files_only=True)
         wh_base = safe_to_device(wh_base)
         self.wh_model = PeftModel.from_pretrained(wh_base, str(WHISPER_ADAPTER))
