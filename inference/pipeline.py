@@ -85,13 +85,14 @@ class EntropicPipeline:
         # 2. ITN (Text -> Normalized Numbers)
         # ==========================================
         words = transcript.lower().split()
-        enc_itn = self.itn_tok(words, is_split_into_words=True, return_tensors="pt", truncation=True)
-        enc_itn = {k: v.to(DEVICE) for k, v in enc_itn.items()}
+        enc_itn_obj = self.itn_tok(words, is_split_into_words=True, return_tensors="pt", truncation=True)
+        word_ids = enc_itn_obj.word_ids()
+        
+        enc_itn = {k: v.to(DEVICE) for k, v in enc_itn_obj.items()}
         
         with torch.no_grad():
             itn_logits = self.itn_model(**enc_itn).logits
         itn_preds = torch.argmax(itn_logits, dim=-1)[0].cpu().numpy()
-        word_ids = enc_itn.word_ids()
 
         word_labels = {}
         for idx, wid in enumerate(word_ids):
