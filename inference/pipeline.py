@@ -93,6 +93,9 @@ class EntropicPipeline:
         # ==========================================
         audio, sr = librosa.load(audio_path, sr=16000, mono=True)
         
+        # Trim leading/trailing silence mechanically for better ASR performance
+        audio, _ = librosa.effects.trim(audio, top_db=30)
+        
         # Apply Neural VAD (Silero) if successfully loaded
         if getattr(self, "vad_model", None) is not None:
             audio_tensor = torch.tensor(audio)
