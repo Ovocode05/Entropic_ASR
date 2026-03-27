@@ -90,7 +90,9 @@ class EntropicPipeline:
         with torch.no_grad():
             pred_ids = self.wh_model.generate(
                 input_features=inputs.input_features, 
-                max_new_tokens=50
+                max_new_tokens=50,
+                repetition_penalty=1.2,
+                no_repeat_ngram_size=3
             ) 
         transcript = self.wh_proc.batch_decode(pred_ids, skip_special_tokens=True)[0].strip()
 
