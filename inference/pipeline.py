@@ -115,6 +115,7 @@ class EntropicPipeline:
                 print(f"  [WARN] CUDA crash during Whisper generation ({e}). Forcing CPU fallback.")
                 self.wh_model = self.wh_model.to("cpu")
                 inputs = inputs.to("cpu")
+                torch.cuda.empty_cache()
                 with torch.no_grad():
                     pred_ids = self.wh_model.generate(
                         input_features=inputs.input_features, 
@@ -139,8 +140,20 @@ class EntropicPipeline:
         
         enc_itn = {k: v.to(self.itn_model.device) for k, v in enc_itn_obj.items()}
         
-        with torch.no_grad():
-            itn_logits = self.itn_model(**enc_itn).logits
+        try:
+            with torch.no_grad():
+                itn_logits = self.itn_model(**enc_itn).logits
+        except RuntimeError as e:
+            if "CUDA" in str(e) or "CUBLAS" in str(e):
+                print(f"  [WARN] CUDA crash during ITN ({e}). Forcing CPU fallback.")
+                self.itn_model = self.itn_model.to("cpu")
+                enc_itn = {k: v.to("cpu") for k, v in enc_itn.items()}
+                torch.cuda.empty_cache()
+                with torch.no_grad():
+                    itn_logits = self.itn_model(**enc_itn).logits
+            else:
+                raise e
+                
         itn_preds = torch.argmax(itn_logits, dim=-1)[0].cpu().numpy()
 
         word_labels = {}
@@ -167,8 +180,20 @@ class EntropicPipeline:
         enc_int = self.intent_tok(normalized_text, return_tensors="pt", truncation=True)
         enc_int = {k: v.to(self.intent_model.device) for k, v in enc_int.items()}
         
-        with torch.no_grad():
-            int_logits = self.intent_model(**enc_int).logits
+        try:
+            with torch.no_grad():
+                int_logits = self.intent_model(**enc_int).logits
+        except RuntimeError as e:
+            if "CUDA" in str(e) or "CUBLAS" in str(e):
+                print(f"  [WARN] CUDA crash during Intent Classification ({e}). Forcing CPU fallback.")
+                self.intent_model = self.intent_model.to("cpu")
+                enc_int = {k: v.to("cpu") for k, v in enc_int.items()}
+                torch.cuda.empty_cache()
+                with torch.no_grad():
+                    int_logits = self.intent_model(**enc_int).logits
+            else:
+                raise e
+                
         probs = torch.softmax(int_logits, dim=-1)[0]
         max_prob, pred_id = probs.max(dim=0)
         
