@@ -237,6 +237,7 @@ def main(args):
     ]
     for text in demo_sentences:
         enc = tokenizer(text, return_tensors="pt")
+        enc = {k: v.to(device) for k, v in enc.items()}
         with torch.no_grad():
             logits = model(**enc).logits
         probs = torch.softmax(logits, dim=-1)[0]
