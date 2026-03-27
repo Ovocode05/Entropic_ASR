@@ -139,7 +139,7 @@ class EntropicPipeline:
         # ==========================================
         # 2. ITN (Text -> Normalized Numbers)
         # ==========================================
-        words = transcript.lower().split()
+        words = transcript.split()
         enc_itn_obj = self.itn_tok(words, is_split_into_words=True, return_tensors="pt", truncation=True)
         word_ids = enc_itn_obj.word_ids()
         
@@ -169,7 +169,7 @@ class EntropicPipeline:
         final_words = []
         for i, w in enumerate(words):
             if word_labels.get(i) == "NUM":
-                clean_w = ''.join(c for c in w if c.isalnum())
+                clean_w = ''.join(c for c in w if c.isalnum()).lower()
                 if clean_w in NUMBER_WORDS:
                     final_words.append(str(NUMBER_WORDS[clean_w]))
                 else:
