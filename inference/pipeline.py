@@ -9,7 +9,6 @@ from transformers import (
     AutoTokenizer, DistilBertForTokenClassification, AutoModelForSequenceClassification
 )
 from peft import PeftModel
-from indic_transliteration import sanscript
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -94,7 +93,7 @@ class EntropicPipeline:
         audio, sr = librosa.load(audio_path, sr=16000, mono=True)
         
         # Trim leading/trailing silence mechanically for better ASR performance
-        audio, _ = librosa.effects.trim(audio, top_db=30)
+        audio, _ = librosa.effects.trim(audio, top_db=45, frame_length=1024, hop_length=256)
         
         # Apply Neural VAD (Silero) if successfully loaded
         if getattr(self, "vad_model", None) is not None:
@@ -111,7 +110,10 @@ class EntropicPipeline:
                     input_features=inputs.input_features, 
                     attention_mask=inputs.get("attention_mask"),
                     forced_decoder_ids=self.forced_decoder_ids,
-                    max_new_tokens=50
+                    max_new_tokens=50,
+                    condition_on_prev_tokens=False,
+                    no_repeat_ngram_size=3,
+                    repetition_penalty=1.1
                 ) 
         except RuntimeError as e:
             if "CUDA" in str(e) or "CUBLAS" in str(e):
@@ -124,15 +126,14 @@ class EntropicPipeline:
                         input_features=inputs.input_features, 
                         attention_mask=inputs.get("attention_mask"),
                         forced_decoder_ids=self.forced_decoder_ids,
-                        max_new_tokens=50
+                        max_new_tokens=50,
+                        condition_on_prev_tokens=False,
+                        no_repeat_ngram_size=3,
+                        repetition_penalty=1.1
                     )
             else:
                 raise e
         transcript = self.wh_proc.batch_decode(pred_ids, skip_special_tokens=True)[0].strip()
-
-        # Safety Fallback: if Whisper heavily forced Devanagari, cleanly transliterate back to Roman
-        if any('\u0900' <= c <= '\u097f' for c in transcript):
-            transcript = sanscript.transliterate(transcript, sanscript.DEVANAGARI, sanscript.ITRANS).lower()
 
         # ==========================================
         # 2. ITN (Text -> Normalized Numbers)
