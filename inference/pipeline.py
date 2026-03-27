@@ -102,12 +102,28 @@ class EntropicPipeline:
                 audio = torch.cat([audio_tensor[ts['start']:ts['end']] for ts in timestamps]).numpy()
 
         inputs = self.wh_proc(audio, sampling_rate=16000, return_tensors="pt").to(self.wh_model.device)
-        with torch.no_grad():
-            pred_ids = self.wh_model.generate(
-                input_features=inputs.input_features, 
-                forced_decoder_ids=self.forced_decoder_ids,
-                max_new_tokens=50
-            ) 
+        try:
+            with torch.no_grad():
+                pred_ids = self.wh_model.generate(
+                    input_features=inputs.input_features, 
+                    attention_mask=inputs.get("attention_mask"),
+                    forced_decoder_ids=self.forced_decoder_ids,
+                    max_new_tokens=50
+                ) 
+        except RuntimeError as e:
+            if "CUDA" in str(e) or "CUBLAS" in str(e):
+                print(f"  [WARN] CUDA crash during Whisper generation ({e}). Forcing CPU fallback.")
+                self.wh_model = self.wh_model.to("cpu")
+                inputs = inputs.to("cpu")
+                with torch.no_grad():
+                    pred_ids = self.wh_model.generate(
+                        input_features=inputs.input_features, 
+                        attention_mask=inputs.get("attention_mask"),
+                        forced_decoder_ids=self.forced_decoder_ids,
+                        max_new_tokens=50
+                    )
+            else:
+                raise e
         transcript = self.wh_proc.batch_decode(pred_ids, skip_special_tokens=True)[0].strip()
 
         # Safety Fallback: if Whisper heavily forced Devanagari, cleanly transliterate back to Roman
