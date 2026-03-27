@@ -14,6 +14,17 @@ from indic_transliteration import sanscript
 BASE_DIR = Path(__file__).resolve().parents[1]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+def safe_to_device(model):
+    if DEVICE == "cpu":
+        return model
+    try:
+        torch.cuda.empty_cache()
+        return model.to(DEVICE)
+    except Exception as e:
+        print(f"  [WARN] CUDA NVML or OOM error ({e}). Falling back to CPU for this model.")
+        return model.to("cpu")
+
+
 # Load endpoints
 WHISPER_ADAPTER = BASE_DIR / "models/adapters/whisper_lora"
 ITN_MODEL       = BASE_DIR / "models/adapters/distilbert_itn"
@@ -37,17 +48,20 @@ class EntropicPipeline:
         
         print(" [1/3] Whisper ASR + LoRA...")
         self.wh_proc = WhisperProcessor.from_pretrained("openai/whisper-small", local_files_only=True)
-        wh_base = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small", local_files_only=True).to(DEVICE)
+        wh_base = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small", local_files_only=True)
+        wh_base = safe_to_device(wh_base)
         self.wh_model = PeftModel.from_pretrained(wh_base, str(WHISPER_ADAPTER))
 
         print(" [2/3] DistilBERT Neural ITN...")
         self.itn_tok = AutoTokenizer.from_pretrained(str(ITN_MODEL))
-        self.itn_model = DistilBertForTokenClassification.from_pretrained(str(ITN_MODEL)).to(DEVICE)
+        itn_base = DistilBertForTokenClassification.from_pretrained(str(ITN_MODEL))
+        self.itn_model = safe_to_device(itn_base)
         self.itn_model.eval()
 
         print(" [3/4] DistilBERT Intent Classifier...")
         self.intent_tok = AutoTokenizer.from_pretrained(str(INTENT_MODEL))
-        self.intent_model = AutoModelForSequenceClassification.from_pretrained(str(INTENT_MODEL)).to(DEVICE)
+        intent_base = AutoModelForSequenceClassification.from_pretrained(str(INTENT_MODEL))
+        self.intent_model = safe_to_device(intent_base)
         self.intent_model.eval()
 
         print(" [4/4] Silero VAD (Voice Activity Detection)...")
@@ -86,13 +100,12 @@ class EntropicPipeline:
                 # Reconstruct speech parts only
                 audio = torch.cat([audio_tensor[ts['start']:ts['end']] for ts in timestamps]).numpy()
 
-        inputs = self.wh_proc(audio, sampling_rate=16000, return_tensors="pt").to(DEVICE)
+        inputs = self.wh_proc(audio, sampling_rate=16000, return_tensors="pt").to(self.wh_model.device)
         with torch.no_grad():
             pred_ids = self.wh_model.generate(
                 input_features=inputs.input_features, 
-                max_new_tokens=50,
-                repetition_penalty=1.2,
-                no_repeat_ngram_size=3
+                forced_decoder_ids=self.forced_decoder_ids,
+                max_new_tokens=50
             ) 
         transcript = self.wh_proc.batch_decode(pred_ids, skip_special_tokens=True)[0].strip()
 
@@ -107,7 +120,7 @@ class EntropicPipeline:
         enc_itn_obj = self.itn_tok(words, is_split_into_words=True, return_tensors="pt", truncation=True)
         word_ids = enc_itn_obj.word_ids()
         
-        enc_itn = {k: v.to(DEVICE) for k, v in enc_itn_obj.items()}
+        enc_itn = {k: v.to(self.itn_model.device) for k, v in enc_itn_obj.items()}
         
         with torch.no_grad():
             itn_logits = self.itn_model(**enc_itn).logits
@@ -135,7 +148,7 @@ class EntropicPipeline:
         # 3. Intent Classification
         # ==========================================
         enc_int = self.intent_tok(normalized_text, return_tensors="pt", truncation=True)
-        enc_int = {k: v.to(DEVICE) for k, v in enc_int.items()}
+        enc_int = {k: v.to(self.intent_model.device) for k, v in enc_int.items()}
         
         with torch.no_grad():
             int_logits = self.intent_model(**enc_int).logits
