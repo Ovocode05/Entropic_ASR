@@ -1,3 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Models & data
+models/
+waves/
+
+# OS / misc
+.DS_Store
 .env
 # Hindi-English/test
 Hindi-English/train
