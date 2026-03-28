@@ -43,7 +43,7 @@ async def chat_endpoint(
     Takes a session_id and a user voice file -> returns the LLM's Hinglish response.
     """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        contents = await file.read()
+        contents = await audio.read()
         tmp.write(contents)
         tmp_path = tmp.name
         
