@@ -89,25 +89,55 @@ def apply_itn_substitution(words: list, word_labels: dict) -> list:
     return final_words
 
 
-# ── CONFIDENCE ────────────────────────────────────────────────────────────────
+# ── TEXT NORMALIZATION (closes train/inference format gap) ───────────────────
 #
-# Thresholds calibrated against real DGX inference output which runs Whisper on
-# CPU fallback after CUDA OOM. CPU Whisper outputs slightly different logit
-# distributions than GPU Whisper, so thresholds are tuned lower.
+# Training data: short, lowercase, no punctuation  ("das hazaar bhejo")
+# Whisper output: proper case, punctuated, longer   ("Send 10,000 rupees.")
 #
-# ACCEPT        >= 0.45   (clear utterances; prev 0.55 was too strict on CPU)
-# SOFT_REPROMPT  0.28-0.45 (ambiguous / short; ask for confirmation)
-# HARD_REPROMPT < 0.28   (noise / totally OOD)
+# DistilBERT tokenizes "balance" and "Balance." differently.
+# Normalizing the Whisper transcript to match training format
+# restores the token distribution the classification head was calibrated for.
+
+import re as _re
+
+def normalize_for_intent(text: str) -> str:
+    """Lowercase + strip punctuation to match training data format."""
+    text = text.lower()
+    # Keep alphanumeric, whitespace, ₹ sign, digits
+    text = _re.sub(r'[^\w\s\u20b9]', ' ', text)
+    text = ' '.join(text.split())
+    return text
+
+
+# ── CONFIDENCE + OOD DETECTION ────────────────────────────────────────────────
+#
+# The model has 5 classes. There is no REJECT / OTHER class.
+# Any OOD input (greetings, noise, random speech) is FORCED into one of 5
+# financial labels — confidence will always be low and label will be wrong.
+#
+# Fix: compute Shannon entropy H of the softmax distribution.
+#   H_max = ln(5) ≈ 1.609  (uniform = maximum uncertainty)
+#   H < 0.5  → clear prediction
+#   H > 1.4  → near-uniform = OOD input, treat as UNKNOWN
+
+OOD_ENTROPY_THRESH = 1.40    # flag anything above this as out-of-distribution
 
 CALIB_TEMP = 1.0
 HIGH_CONF  = 0.45
 LOW_CONF   = 0.28
 
 
-def get_confidence(logits: torch.Tensor) -> tuple[int, float]:
-    probs = torch.softmax(logits / CALIB_TEMP, dim=-1)[0]
-    max_prob, pred_id = probs.max(dim=0)
-    return pred_id.item(), round(max_prob.item(), 4)
+def get_confidence(logits: torch.Tensor) -> tuple[int, float, bool]:
+    """Returns (pred_id, confidence, is_ood)."""
+    import math
+    probs   = torch.softmax(logits / CALIB_TEMP, dim=-1)[0]
+    np_prob = probs.cpu().numpy()
+    pred_id = int(np_prob.argmax())
+    conf    = round(float(np_prob[pred_id]), 4)
+    # Shannon entropy
+    H       = float(-sum(p * math.log(p + 1e-12) for p in np_prob))
+    is_ood  = H > OOD_ENTROPY_THRESH
+    return pred_id, conf, is_ood
 
 
 # ── KEYWORD OVERRIDE ──────────────────────────────────────────────────────────
@@ -261,8 +291,10 @@ class EntropicPipeline:
                 word_labels[wid] = self.itn_model.config.id2label[preds[idx]]
         return " ".join(apply_itn_substitution(words, word_labels))
 
-    def _run_intent(self, text: str) -> tuple[str, float]:
-        enc = self.intent_tok(text, return_tensors="pt", truncation=True)
+    def _run_intent(self, text: str) -> tuple[str, float, bool]:
+        # Normalize to match training data format BEFORE tokenizing
+        normalized = normalize_for_intent(text)
+        enc = self.intent_tok(normalized, return_tensors="pt", truncation=True)
         enc = {k: v.to(self.intent_model.device) for k, v in enc.items()}
         try:
             with torch.no_grad():
@@ -276,8 +308,8 @@ class EntropicPipeline:
                     logits = self.intent_model(**enc).logits
             else:
                 raise
-        pred_id, conf = get_confidence(logits)
-        return self.id2label[pred_id], conf
+        pred_id, conf, is_ood = get_confidence(logits)
+        return self.id2label[pred_id], conf, is_ood
 
     def transcribe(self, audio_path: str) -> dict:
         latency = {}
@@ -306,44 +338,50 @@ class EntropicPipeline:
         normalized_text = self._run_itn(transcript.split()) if transcript.split() else transcript
         latency["itn_ms"] = round((time.time() - t0) * 1000, 1)
 
-        # Stage 4: Intent
+        # Stage 4: Intent (with OOD detection)
         t0 = time.time()
-        intent, conf = self._run_intent(normalized_text)
+        intent, conf, is_ood = self._run_intent(normalized_text)
         latency["intent_ms"] = round((time.time() - t0) * 1000, 1)
 
-        # Stage 5: Tier assignment + keyword override
+        # Stage 5: Tier assignment + keyword override + OOD gate
         #
-        # Keyword override is now UNCONDITIONAL — if transcript contains a
-        # keyword, that keyword wins as the intent regardless of what the model
-        # predicted. This fixes mis-classifications like:
-        #   "1000 rupees Rahul ko send kar do" → model says BILL_PAYMENT
-        #   but keyword "send" → SEND_MONEY ✓
+        # OOD gate (Fix B): if entropy is near-uniform (H > 1.4), the model
+        # is completely uncertain — likely non-financial / greetings / noise.
+        # We short-circuit to UNKNOWN / HARD_REPROMPT instead of propagating
+        # a wrong financial label with low confidence.
+        #
+        # Keyword override (Fix A extension): if transcript contains an
+        # unambiguous financial keyword, that keyword wins as the intent
+        # regardless of what the model predicted. This handles cases where
+        # the model predicts the wrong label even on financial utterances.
+        #
         kw_intent = keyword_intent_match(transcript)
 
-        if kw_intent is not None:
+        if is_ood and kw_intent is None:
+            # Entropy-based OOD: model is near-uniform and no keyword found
+            final_intent   = "UNKNOWN"
+            keyword_agrees = False
+            tier           = "HARD_REPROMPT"
+            reported_conf  = conf
+        elif kw_intent is not None:
             # Keyword found: use keyword intent unconditionally
             final_intent   = kw_intent
             keyword_agrees = True
+            tier           = confidence_tier(conf, keyword_override=True)
+            reported_conf  = (
+                KEYWORD_OVERRIDE_CONF if conf < HIGH_CONF else conf
+            )
         else:
-            # No keyword: trust the model
+            # No keyword, not OOD: trust the model
             final_intent   = intent
             keyword_agrees = False
-
-        tier = confidence_tier(conf, keyword_override=keyword_agrees)
-
-        # Reported confidence: when keyword promoted the tier, show a
-        # meaningful value; otherwise show raw model probability.
-        reported_conf = (
-            KEYWORD_OVERRIDE_CONF
-            if keyword_agrees and conf < HIGH_CONF
-            else conf
-        )
+            tier           = confidence_tier(conf, keyword_override=False)
+            reported_conf  = conf
 
         amount = self.extract_amount(normalized_text)
         latency["total_ms"] = round((time.time() - t_total) * 1000, 1)
 
-        # intent field: clean label always (no suffix) — Streamlit + agent both
-        # read intent_raw; the "status" field carries ACCEPT/SOFT/HARD info.
+        # intent field: always clean label — status field carries tier info
         return {
             "status":           tier,
             "transcript":       transcript,
