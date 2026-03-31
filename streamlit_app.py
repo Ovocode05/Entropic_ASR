@@ -234,6 +234,12 @@ def init_state():
 
 init_state()
 
+# ── Turn counter (used to rotate widget keys) ───────────────────────────────
+# When this changes, Streamlit creates a NEW widget instance, discarding the
+# old recording. This is what makes multi-turn recording work reliably.
+if "widget_turn" not in st.session_state:
+    st.session_state.widget_turn = 0
+
 
 # ── Restore from URL query param on first load ────────────────────────────────
 # If the user refreshes the page, ?sid=xxx is still in the URL.
@@ -264,7 +270,7 @@ def reset_session():
     st.rerun()
 
 
-# ── Audio hash helper ─────────────────────────────────────────────────────────
+# ── Audio hash helper (deduplication) ────────────────────────────────────────
 def audio_md5(audio_bytes: bytes) -> str:
     return hashlib.md5(audio_bytes).hexdigest()
 
@@ -413,26 +419,33 @@ with col_left:
             unsafe_allow_html=True,
         )
 
-    # ── Audio input ───────────────────────────────────────────────────────
-    # st.audio_input() — available in Streamlit >= 1.31.0
-    # Uses the browser's native audio recording widget. Cleaner than
-    # streamlit-mic-recorder and does not require a separate package.
-    # Falls back to file uploader if the Streamlit version is too old.
+    # ── Audio input — widget key rotates each turn ────────────────────────
+    # Appending `widget_turn` to the key forces Streamlit to create a brand-
+    # new widget instance after every successful submission, discarding the
+    # old recording so the user must re-record for the next turn.
+    # This is the fix for "stops showing output after one success".
 
+    turn_key     = st.session_state.widget_turn
     audio_bytes  = None
-    input_source = None   # "mic" | "upload"
+    input_source = None
 
     has_audio_input = hasattr(st, "audio_input")
 
     if has_audio_input:
+        turns_done = len(st.session_state.turn_log)
+        caption_txt = (
+            f"Turn {turns_done + 1} — record your response, then click **Submit Turn**"
+            if turns_done > 0
+            else "Press the mic button to start recording, then stop when done"
+        )
         tab_mic, tab_file = st.tabs(["🎤  Record", "📁  Upload .wav"])
 
         with tab_mic:
-            st.caption("Press the mic button to start/stop recording")
+            st.caption(caption_txt)
             recorded = st.audio_input(
                 "Record audio",
                 label_visibility="collapsed",
-                key="mic_widget",
+                key=f"mic_widget_{turn_key}",
             )
             if recorded is not None:
                 audio_bytes  = recorded.read()
@@ -443,20 +456,19 @@ with col_left:
                 "Upload audio",
                 type=["wav", "mp3", "m4a", "ogg"],
                 label_visibility="collapsed",
-                key="file_widget",
+                key=f"file_widget_{turn_key}",
             )
             if uploaded is not None:
                 audio_bytes  = uploaded.read()
                 input_source = "upload"
 
     else:
-        # Streamlit < 1.31 fallback
         st.caption("Upgrade to Streamlit >= 1.31 for mic recording. File upload available now:")
         uploaded = st.file_uploader(
             "Upload audio",
             type=["wav", "mp3", "m4a", "ogg"],
             label_visibility="collapsed",
-            key="file_widget",
+            key=f"file_widget_{turn_key}",
         )
         if uploaded is not None:
             audio_bytes  = uploaded.read()
@@ -464,76 +476,87 @@ with col_left:
 
     st.caption(f'💡 Example: *"{uc["example"]}"*')
 
-    # ── Process audio — only when hash changes ────────────────────────────
-    #
-    # Root cause of "keeps showing same result":
-    # Streamlit reruns the entire script on every widget interaction
-    # (tab switch, button click, etc.). Without a hash check, `audio_bytes`
-    # is re-sent to the API on every rerun even if nothing new was recorded.
-    #
-    # Fix: MD5-hash the audio bytes. Only call the API when the hash is
-    # different from the last one we processed. After processing, store the
-    # new hash so the next rerun does nothing.
+    # ── Explicit Submit button (no more auto-fire on hash) ────────────────
+    submit_ready   = audio_bytes is not None and not st.session_state.conversation_done
+    submit_clicked = False
+    if submit_ready:
+        turn_label = len(st.session_state.turn_log) + 1
+        submit_clicked = st.button(
+            f"▶  Submit Turn {turn_label}",
+            type="primary",
+            use_container_width=True,
+        )
 
-    if audio_bytes and not st.session_state.conversation_done:
+    if submit_clicked and audio_bytes:
         current_hash = audio_md5(audio_bytes)
 
-        if current_hash != st.session_state.last_audio_hash:
-            # This is genuinely new audio — create session if needed
-            if st.session_state.session_id is None:
-                prefix = uc["session_prefix"]
-                sid    = f"{prefix}_{int(time.time())}"
-                st.session_state.session_id = sid
-                # Write session_id into URL so refresh restores it
-                st.query_params["sid"] = sid
+        if st.session_state.session_id is None:
+            prefix = uc["session_prefix"]
+            sid    = f"{prefix}_{int(time.time())}"
+            st.session_state.session_id = sid
+            st.query_params["sid"] = sid
 
-            with st.spinner("Processing audio…"):
-                result = send_audio(audio_bytes, st.session_state.session_id)
+        with st.spinner("Processing audio…"):
+            result = send_audio(audio_bytes, st.session_state.session_id)
 
-            # Store hash immediately — even if API failed, don't retry same audio
-            st.session_state.last_audio_hash = current_hash
+        # Bump widget_turn → next rerun creates a fresh empty audio widget
+        st.session_state.widget_turn    += 1
+        st.session_state.last_audio_hash = current_hash
 
-            if result:
-                ps = result.get("pipeline_state", result)
-                ag = result.get("agent_state", {})
+        if result:
+            ps = result.get("pipeline_state", result)
+            ag = result.get("agent_state", {})
 
-                tier     = ps.get("status", "ACCEPT")
-                conf     = ps.get("confidence", 0.0)
-                raw_conf = ps.get("raw_confidence", conf)
-                kw_flag  = ps.get("keyword_override", False)
+            tier     = ps.get("status", "ACCEPT")
+            conf     = ps.get("confidence", 0.0)
+            raw_conf = ps.get("raw_confidence", conf)
+            kw_flag  = ps.get("keyword_override", False)
 
-                st.session_state.last_transcript  = ps.get("transcript", "")
-                st.session_state.last_normalized  = ps.get("normalized_text", "")
-                st.session_state.last_conf        = conf
-                st.session_state.last_raw_conf    = raw_conf
-                st.session_state.last_tier        = tier
-                st.session_state.last_kw_override = kw_flag
-                st.session_state.last_latency     = ps.get("latency", result.get("latency", {}))
+            st.session_state.last_transcript  = ps.get("transcript", "")
+            st.session_state.last_normalized  = ps.get("normalized_text", "")
+            st.session_state.last_conf        = conf
+            st.session_state.last_raw_conf    = raw_conf
+            st.session_state.last_tier        = tier
+            st.session_state.last_kw_override = kw_flag
+            st.session_state.last_latency     = ps.get("latency", result.get("latency", {}))
 
-                a_status = ag.get("status", "")
-                st.session_state.agent_prompt    = ag.get("agent_prompt", ag.get("message", ""))
-                st.session_state.collected_slots = ag.get("collected_slots", ag.get("final_record", {}))
-                st.session_state.missing_slots   = ag.get("missing_slots", [])
-                st.session_state.eval_summary    = ag.get("eval_summary", ag.get("eval", {}))
+            a_status = ag.get("status", "")
+            st.session_state.agent_prompt    = ag.get("agent_prompt", ag.get("message", ""))
+            st.session_state.collected_slots = ag.get("collected_slots", ag.get("final_record", {}))
+            st.session_state.missing_slots   = ag.get("missing_slots", [])
+            st.session_state.eval_summary    = ag.get("eval_summary", ag.get("eval", {}))
 
-                st.session_state.turn_log.append({
-                    "turn":       len(st.session_state.turn_log) + 1,
-                    "transcript": st.session_state.last_transcript,
-                    "tier":       tier,
-                    "conf":       conf,
-                    "kw":         kw_flag,
-                    "source":     input_source,
-                })
+            st.session_state.turn_log.append({
+                "turn":       len(st.session_state.turn_log) + 1,
+                "transcript": st.session_state.last_transcript,
+                "tier":       tier,
+                "conf":       conf,
+                "kw":         kw_flag,
+                "source":     input_source,
+            })
 
-                if a_status == "complete":
-                    st.session_state.final_record      = ag.get("final_record", {})
-                    st.session_state.eval_summary      = ag.get("eval_summary", {})
-                    st.session_state.conversation_done = True
+            if a_status == "complete":
+                st.session_state.final_record      = ag.get("final_record", {})
+                st.session_state.eval_summary      = ag.get("eval_summary", {})
+                st.session_state.conversation_done = True
 
-            # Persist state to disk after every turn so refresh restores it
-            save_ui_state(st.session_state.session_id)
+        save_ui_state(st.session_state.session_id)
+        st.rerun()   # ← rotates widget key so audio widget resets for next turn
 
-        # else: same audio as last turn — do nothing, just render existing state
+    # ── Post-turn status banner ────────────────────────────────────────────
+    if st.session_state.last_transcript and not st.session_state.conversation_done:
+        turns_done = len(st.session_state.turn_log)
+        missing_n  = len(st.session_state.missing_slots)
+        st.markdown(
+            f'<div style="background:#0a1a0a;border:1px solid #1a4a1a;border-radius:4px;'
+            f'padding:8px 12px;font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;'
+            f'color:#3ddc84;margin-top:8px">'
+            f'✓ Turn {turns_done} processed &nbsp;·&nbsp; '
+            f'Record turn {turns_done + 1} above and click Submit'
+            f'{f" &nbsp;·&nbsp; {missing_n} field(s) still needed" if missing_n else " &nbsp;·&nbsp; almost done!"}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Transcript display ─────────────────────────────────────────────────
     if st.session_state.last_transcript:
