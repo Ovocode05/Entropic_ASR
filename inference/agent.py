@@ -60,46 +60,58 @@ class SessionStore:
             self._mem.pop(sid, None)
 
 
-# ── System prompt: LLM's entire operating manual ─────────────────────────────
-SYSTEM_PROMPT = """You are Entropic, an intelligent multilingual voice assistant for India.
-You conduct structured interviews in Hinglish (natural Hindi-English code-switching).
+# ── System prompt ─────────────────────────────────────────────────────────────
+# CRITICAL: Qwen 0.5B follows JSON format best when it sees CONCRETE EXAMPLES.
+# Abstract instructions alone cause it to generate generic English.
+# Few-shot examples are baked in → model knows exactly what output looks like.
+SYSTEM_PROMPT = """You are Entropic, an intelligent Hinglish voice assistant for India.
+You collect structured information through conversation, speaking in Hinglish (Hindi-English mix).
 
-SUPPORTED USE CASES AND THEIR REQUIRED FIELDS:
-- SEND_MONEY        → amount, recipient
-- CHECK_BALANCE     → account_type
-- BILL_PAYMENT      → bill_type, amount, biller_name
-- RECEIVE_MONEY     → amount, sender
-- EXPENSE_LOG       → amount, category
-- FIR_THEFT         → incident, amount_stolen, num_perpetrators, time, location, victim_name
-- FIR_ASSAULT       → incident, time, location, victim_name, accused_description
+SUPPORTED INTENTS AND THEIR REQUIRED FIELDS:
+- SEND_MONEY     → amount, recipient
+- CHECK_BALANCE  → account_type
+- BILL_PAYMENT   → bill_type, amount, biller_name
+- RECEIVE_MONEY  → amount, sender
+- EXPENSE_LOG    → amount, category
+- FIR_THEFT      → incident, amount_stolen, num_perpetrators, time, location, victim_name
+- FIR_ASSAULT    → incident, time, location, victim_name, accused_description
 - ASSET_DECLARATION → asset_type, size_or_value, location, beneficiary, declarant_name
-- HEALTH_RECORD     → child_age, weight, symptom, household_id
-- UNKNOWN           → clarify the use case first before collecting any fields
+- HEALTH_RECORD  → child_age, weight, symptom, household_id
+- UNKNOWN        → clarify use case before collecting any fields
 
-YOUR BEHAVIOUR EACH TURN:
-1. Read the conversation history to know what is already collected.
-2. Read the latest user input. Extract every new piece of structured information it contains.
-3. Merge new extractions with previously collected data (already_collected).
-4. Check which required fields for the active intent are STILL missing.
-5. If fields are still missing → ask ONE natural Hinglish question for the SINGLE MOST IMPORTANT missing field. Be direct, warm, and vary your phrasing across turns.
-6. If ALL required fields are filled → set status to "complete" and write a brief confirmation.
-7. If audio quality is LOW (tier=HARD_REPROMPT) → ask the user to repeat that specific part clearly.
-8. If intent is UNKNOWN → ask a short clarifying question to identify the use case.
+YOUR OUTPUT MUST BE VALID JSON, EXACTLY IN THIS SCHEMA:
+{"extracted":{"field":"value"},"all_collected":{"field":"value"},"still_needed":["field1"],"status":"incomplete","hinglish_response":"your message"}
 
-OUTPUT RULES:
-- Return ONLY valid JSON. No markdown. No explanation outside the JSON.
-- Do NOT hallucinate field values. Only use what the user actually said.
-- Keep hinglish_response concise (≤ 2 sentences). One question per turn.
-- Field values must be strings. Use "UNKNOWN" only if genuinely unclear.
+RULES:
+1. hinglish_response MUST be in Hinglish (mix Hindi+English words). NEVER pure English.
+2. Extract ONLY what user explicitly said. Never invent values.
+3. Ask ONE question per turn for the MOST IMPORTANT missing field.
+4. If all fields collected → set status to "complete".
+5. If intent is UNKNOWN → ask what the user wants to do, in Hinglish.
+6. If audio_tier is HARD_REPROMPT → ask user to repeat clearly, in Hinglish.
+7. No markdown, no explanation, ONLY JSON.
 
-JSON SCHEMA:
-{
-  "extracted":        {"field": "value"},
-  "all_collected":    {"field": "value"},
-  "still_needed":     ["field1", "field2"],
-  "status":           "incomplete" | "complete",
-  "hinglish_response": "your Hinglish message to the user"
-}"""
+FEW-SHOT EXAMPLES (follow these exactly):
+
+Example 1 — SEND_MONEY, first turn, amount known, recipient missing:
+Input: transcript="1000 rupay Rahul ko bhej do", intent="SEND_MONEY", already_collected={}
+Output: {"extracted":{"amount":"1000","recipient":"Rahul"},"all_collected":{"amount":"1000","recipient":"Rahul"},"still_needed":[],"status":"complete","hinglish_response":"Theek hai! 1000 rupay Rahul ko transfer kar rahe hain. Confirm karein?"}
+
+Example 2 — SEND_MONEY, recipient missing:
+Input: transcript="paanch hazaar bhejo", intent="SEND_MONEY", already_collected={"amount":"5000"}
+Output: {"extracted":{},"all_collected":{"amount":"5000"},"still_needed":["recipient"],"status":"incomplete","hinglish_response":"Paisa kis ko bhejna hai? Naam batayein."}
+
+Example 3 — UNKNOWN intent (greeting/unclear):
+Input: transcript="hello namaste", intent="UNKNOWN", already_collected={}
+Output: {"extracted":{},"all_collected":{},"still_needed":[],"status":"incomplete","hinglish_response":"Namaste! Aap kya karna chahte hain? Paisa bhejna, balance check, ya kuch aur?"}
+
+Example 4 — HARD_REPROMPT (audio unclear):
+Input: transcript="...", intent="UNKNOWN", audio_tier="HARD_REPROMPT", already_collected={}
+Output: {"extracted":{},"all_collected":{},"still_needed":[],"status":"incomplete","hinglish_response":"Maafi, awaaz clearly nahi aayi. Thoda paas aakar dobara bolein?"}
+
+Example 5 — FIR_THEFT, partial info:
+Input: transcript="kal raat dukan mein ghuse teen log paanch hazaar le gaye", intent="FIR_THEFT", already_collected={}
+Output: {"extracted":{"incident":"dukaan mein ghuse","num_perpetrators":"3","amount_stolen":"5000"},"all_collected":{"incident":"dukaan mein ghuse","num_perpetrators":"3","amount_stolen":"5000"},"still_needed":["time","location","victim_name"],"status":"incomplete","hinglish_response":"Samajh gaya. Yeh ghatna kab aur kahan hui? Aur aapka naam kya hai?"}"""
 
 
 def new_session() -> dict:
@@ -138,6 +150,46 @@ class SmartAgentDecisionLayer:
 
         self.llm_device = self.llm.device
         print(f"  [SESSION] LLM loaded on {self.llm_device}.")
+
+    # ── LLM intent inference (fallback for UNKNOWN/uncertain cases) ──────────
+    def _llm_infer_intent(self, transcript: str) -> str:
+        """
+        Ask the LLM to classify intent when DistilBERT returned UNKNOWN.
+        Returns one of the supported intent labels or UNKNOWN.
+        This is the smart fallback — the LLM understands context far better
+        than a small 237-sample DistilBERT for ambiguous/OOD english inputs.
+        """
+        # Very short prompt — 0.5B models respond better to concise instructions
+        user_msg = (
+            f'User said: "{transcript}"\n\n'
+            f"What is the intent? Pick EXACTLY ONE:\n"
+            f"SEND_MONEY / CHECK_BALANCE / BILL_PAYMENT / RECEIVE_MONEY / EXPENSE_LOG / "
+            f"FIR_THEFT / FIR_ASSAULT / ASSET_DECLARATION / HEALTH_RECORD / UNKNOWN\n\n"
+            f"Respond with ONLY the intent label, nothing else."
+        )
+        messages = [
+            {"role": "system", "content": "You are an intent classifier. Output ONLY the intent label."},
+            {"role": "user",   "content": user_msg},
+        ]
+        text   = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = self.tokenizer([text], return_tensors="pt").to(self.llm_device)
+        with torch.no_grad():
+            out = self.llm.generate(
+                **inputs,
+                max_new_tokens=8,          # just one label word
+                do_sample=False,           # greedy — deterministic for classification
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+        label = self.tokenizer.decode(
+            out[0][inputs.input_ids.shape[1]:], skip_special_tokens=True
+        ).strip().split()[0].upper()  # take first word, uppercase
+
+        VALID_INTENTS = {
+            "SEND_MONEY", "CHECK_BALANCE", "BILL_PAYMENT", "RECEIVE_MONEY",
+            "EXPENSE_LOG", "FIR_THEFT", "FIR_ASSAULT", "ASSET_DECLARATION",
+            "HEALTH_RECORD", "UNKNOWN",
+        }
+        return label if label in VALID_INTENTS else "UNKNOWN"
 
     # ── Format conversation history for the prompt ────────────────────────────
     def _format_history(self, session: dict) -> str:
@@ -253,9 +305,24 @@ class SmartAgentDecisionLayer:
         )
         self._update_eval(session, tier, conf)
 
-        # Persist intent once detected
+        # Persist intent once detected by pipeline
         if not session["intent"] and intent not in ("UNKNOWN", "", None):
             session["intent"] = intent
+
+        # ── LLM intent fallback ───────────────────────────────────────────────
+        # If DistilBERT returned UNKNOWN (entropy OOD gate fired) AND we have
+        # no intent from previous turns, try the LLM. It understands context
+        # far better than the small classifier for mixed English/Hinglish input.
+        if not session["intent"] and intent == "UNKNOWN":
+            try:
+                inferred = self._llm_infer_intent(transcript)
+                if inferred != "UNKNOWN":
+                    session["intent"] = inferred
+                    # Add a note to the verbatim log
+                    session["verbatim"][-1] += f" [LLM inferred: {inferred}]"
+                    intent = inferred
+            except Exception as e:
+                print(f"  [WARN] LLM intent inference failed: {e}")
 
         # Pre-populate amount from pipeline if not yet collected
         if amount not in ("UNKNOWN", "", None) and "amount" not in session["collected_slots"]:
