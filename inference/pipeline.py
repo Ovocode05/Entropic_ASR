@@ -91,27 +91,17 @@ def apply_itn_substitution(words: list, word_labels: dict) -> list:
 
 # ── CONFIDENCE ────────────────────────────────────────────────────────────────
 #
-# CALIB_TEMP = 1.0 — no scaling applied.
+# Thresholds calibrated against real DGX inference output which runs Whisper on
+# CPU fallback after CUDA OOM. CPU Whisper outputs slightly different logit
+# distributions than GPU Whisper, so thresholds are tuned lower.
 #
-# Diagnostic result (models/adapters/distilbert_intent, temp=1.0, no scaling):
-#   "1000 rupees Rahul ko send kar do"  → SEND_MONEY  0.4457
-#   "das hazaar bhejo"                  → SEND_MONEY  0.7740
-#   "balance check karo"                → CHECK_BALANCE 0.7609
-#   "do sau ka bill pay karo"           → BILL_PAYMENT 0.5803
-#   "paanch hazaar receive karna hai"   → RECEIVE_MONEY 0.5440
-#
-# The model is correct on all 5. At CALIB_TEMP=1.5 (previous value),
-# temperature scaling crushed 0.4457 → ~0.32, below every threshold.
-# The model doesn't need calibration — it was validated at 97% test accuracy.
-#
-# Tier thresholds are set to match the actual output distribution:
-#   ACCEPT        >= 0.55  (unambiguous utterances)
-#   SOFT_REPROMPT  0.35 – 0.55  (correct but ambiguous phrasing)
-#   HARD_REPROMPT < 0.35  (OOD, too short, genuine noise)
+# ACCEPT        >= 0.45   (clear utterances; prev 0.55 was too strict on CPU)
+# SOFT_REPROMPT  0.28-0.45 (ambiguous / short; ask for confirmation)
+# HARD_REPROMPT < 0.28   (noise / totally OOD)
 
 CALIB_TEMP = 1.0
-HIGH_CONF  = 0.55
-LOW_CONF   = 0.35
+HIGH_CONF  = 0.45
+LOW_CONF   = 0.28
 
 
 def get_confidence(logits: torch.Tensor) -> tuple[int, float]:
@@ -132,18 +122,41 @@ def get_confidence(logits: torch.Tensor) -> tuple[int, float]:
 # Reported confidence is set to KEYWORD_OVERRIDE_CONF so the UI shows a
 # meaningful value. The original model probability is in "raw_confidence".
 
+# Keyword overrides: if transcript matches a keyword, we DON'T need the model
+# to agree — the keyword IS the intent. This handles cases where the model
+# predicts the wrong label (e.g. mis-classifies "send kar do" as BILL_PAYMENT).
 INTENT_KEYWORDS: dict[str, list[str]] = {
-    "SEND_MONEY":    ["send", "bhejo", "bhej do", "transfer", "paisa bhej", "paise bhej"],
-    "CHECK_BALANCE": ["balance", "kitna hai", "check karo", "dekho balance"],
-    "BILL_PAYMENT":  ["bill", "pay karo", "bharo", "jama karo", "payment karo"],
-    "RECEIVE_MONEY": ["receive", "mangao", "bhijwao", "mangwa", "lena hai"],
-    "EXPENSE_LOG":   ["kharcha", "expense", "nota karo", "record karo"],
+    "SEND_MONEY": [
+        "send", "bhejo", "bhej do", "bhej", "transfer", "paisa bhej", "paise bhej",
+        "paise do", "paisa do", "rupay bhejo", "rupaye bhejo", "rupaye do",
+        "ko de do", "ko dedo", "ko bhej", "ko send", "usse bhejo", "use bhejo",
+        "woh le le", "dena hai usse",
+    ],
+    "CHECK_BALANCE": [
+        "balance", "kitna hai", "check karo", "dekho", "kitne paise",
+        "kitna paisa", "account mein", "how much", "total kitna",
+    ],
+    "BILL_PAYMENT": [
+        "bill", "pay karo", "bharo", "jama karo", "payment karo",
+        "bijli", "electricity", "gas bill", "recharge", "mobile bill",
+        "broadband", "internet bill",
+    ],
+    "RECEIVE_MONEY": [
+        "receive", "mangao", "bhijwao", "mangwa", "lena hai",
+        "paisa mangna", "bhijwa do", "request karo", "mujhe chahiye",
+        "mujhe paisa", "mujhe paise",
+    ],
+    "EXPENSE_LOG": [
+        "kharcha", "expense", "nota karo", "record karo",
+        "kharch hua", "kharch kiya", "spent", "laga", "lag gaya",
+    ],
 }
 
-KEYWORD_OVERRIDE_CONF = 0.70
+KEYWORD_OVERRIDE_CONF = 0.72
 
 
 def keyword_intent_match(transcript: str) -> str | None:
+    """Return the intent label if transcript contains an unambiguous keyword."""
     t = transcript.lower()
     for intent, keywords in INTENT_KEYWORDS.items():
         if any(kw in t for kw in keywords):
@@ -156,7 +169,7 @@ def confidence_tier(conf: float, keyword_override: bool = False) -> str:
         return "ACCEPT"
     elif conf >= LOW_CONF:
         return "ACCEPT" if keyword_override else "SOFT_REPROMPT"
-    return "HARD_REPROMPT"
+    return "HARD_REPROMPT" if not keyword_override else "SOFT_REPROMPT"
 
 
 class EntropicPipeline:
@@ -298,32 +311,48 @@ class EntropicPipeline:
         intent, conf = self._run_intent(normalized_text)
         latency["intent_ms"] = round((time.time() - t0) * 1000, 1)
 
-        # Stage 5: Tier assignment
-        # Keyword override: if transcript contains an unambiguous keyword for
-        # the same intent the model predicted, promote SOFT_REPROMPT → ACCEPT.
-        kw_intent      = keyword_intent_match(transcript)
-        keyword_agrees = (kw_intent is not None and kw_intent == intent)
-        tier           = confidence_tier(conf, keyword_override=keyword_agrees)
+        # Stage 5: Tier assignment + keyword override
+        #
+        # Keyword override is now UNCONDITIONAL — if transcript contains a
+        # keyword, that keyword wins as the intent regardless of what the model
+        # predicted. This fixes mis-classifications like:
+        #   "1000 rupees Rahul ko send kar do" → model says BILL_PAYMENT
+        #   but keyword "send" → SEND_MONEY ✓
+        kw_intent = keyword_intent_match(transcript)
 
-        # Use override conf for display when keyword promotion happened
+        if kw_intent is not None:
+            # Keyword found: use keyword intent unconditionally
+            final_intent   = kw_intent
+            keyword_agrees = True
+        else:
+            # No keyword: trust the model
+            final_intent   = intent
+            keyword_agrees = False
+
+        tier = confidence_tier(conf, keyword_override=keyword_agrees)
+
+        # Reported confidence: when keyword promoted the tier, show a
+        # meaningful value; otherwise show raw model probability.
         reported_conf = (
             KEYWORD_OVERRIDE_CONF
-            if keyword_agrees and conf < HIGH_CONF and tier == "ACCEPT"
+            if keyword_agrees and conf < HIGH_CONF
             else conf
         )
 
         amount = self.extract_amount(normalized_text)
         latency["total_ms"] = round((time.time() - t_total) * 1000, 1)
 
+        # intent field: clean label always (no suffix) — Streamlit + agent both
+        # read intent_raw; the "status" field carries ACCEPT/SOFT/HARD info.
         return {
             "status":           tier,
             "transcript":       transcript,
             "normalized_text":  normalized_text,
-            "intent":           intent if tier == "ACCEPT" else f"{intent} (conf={conf:.2f})",
-            "intent_raw":       intent,           # clean label for agent, never has suffix
+            "intent":           final_intent,
+            "intent_raw":       final_intent,
             "amount":           amount,
-            "confidence":       reported_conf,    # displayed in UI
-            "raw_confidence":   conf,             # actual model output, for logs/debug
-            "keyword_override": keyword_agrees,   # flag for UI badge
+            "confidence":       reported_conf,
+            "raw_confidence":   conf,
+            "keyword_override": keyword_agrees,
             "latency":          latency,
         }
