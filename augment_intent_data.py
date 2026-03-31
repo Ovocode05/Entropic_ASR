@@ -32,8 +32,8 @@ from pathlib import Path
 random.seed(42)
 
 BASE_DIR = Path(__file__).resolve().parent
-FIN_DATA = BASE_DIR / "data-love/processed/financial_benchmark"
-OUT_DIR  = BASE_DIR / "data-love/processed/financial_benchmark_v2"
+FIN_DATA = BASE_DIR / "data/processed/financial_benchmark"        # actual DGX path
+OUT_DIR  = BASE_DIR / "data/processed/financial_benchmark_v2"
 
 # ── Hinglish → English synonym map ───────────────────────────────────────────
 HINGLISH_TO_ENGLISH = {
@@ -179,10 +179,13 @@ def main():
     new_ds.save_to_disk(str(OUT_DIR))
     print(f"\n✓ Saved to {OUT_DIR}")
     print(f"\nNext step: retrain intent classifier on augmented data:")
-    print(f"  python scripts/train/train_intent.py \\")
-    print(f"    --data financial_benchmark_v2 \\")
-    print(f"    --epochs 25 --lr 2e-5")
-    print(f"\nThis should push Whisper-style confidence from ~0.28 → ~0.65+")
+    print(f"  # 1. Edit INTENT_LABELS in train_intent.py to add 'UNKNOWN':")
+    print(f"  #    INTENT_LABELS = ['BILL_PAYMENT','CHECK_BALANCE','EXPENSE_LOG','RECEIVE_MONEY','SEND_MONEY','UNKNOWN']")
+    print(f"  # 2. Point to v2 dataset:")
+    print(f"  #    FIN_DATA = BASE_DIR / 'data/processed/financial_benchmark_v2'")
+    print(f"  # 3. Run training:")
+    print(f"  python scripts/train/train_intent.py --epochs 25 --lr 2e-5")
+    print(f"\nExpected: Whisper-style confidence 0.28 → 0.65+, OOD sentences → UNKNOWN (direct)")
 
 
 if __name__ == "__main__":
